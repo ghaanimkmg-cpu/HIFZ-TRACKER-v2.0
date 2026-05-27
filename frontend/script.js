@@ -706,10 +706,28 @@ function initDropdowns() {
     btn.textContent = j;
     btn.dataset.juz = j;
     btn.addEventListener('click', () => {
-      btn.classList.toggle('selected');
+      if (!btn.classList.contains('disabled')) {
+        btn.classList.toggle('selected');
+      }
     });
     createJuzGrid.appendChild(btn);
   }
+  
+  const updateDisabledJuz = () => {
+    const startJuz = selCreateStartJuz.value;
+    createJuzGrid.querySelectorAll('.juz-btn').forEach(btn => {
+      if (btn.dataset.juz === startJuz) {
+        btn.classList.add('disabled');
+        btn.classList.remove('selected');
+      } else {
+        btn.classList.remove('disabled');
+      }
+    });
+  };
+  
+  selCreateStartJuz.addEventListener('change', updateDisabledJuz);
+  // Initial call
+  updateDisabledJuz();
   
   createHasPreviousJuz.addEventListener('change', (e) => {
     if (e.target.checked) {

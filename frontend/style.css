@@ -1438,36 +1438,34 @@ a {
 
 .dp-checkmark {
   position: relative;
-  width: 36px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   background-color: var(--color-surface-3);
-  border-radius: 20px;
+  border-radius: 4px;
   border: 1px solid var(--color-border);
-  transition: background-color 0.3s ease, border-color 0.3s ease;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
+  transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .dp-checkmark::after {
   content: "";
   position: absolute;
-  top: 1px;
-  left: 1px;
-  width: 16px;
-  height: 16px;
-  background: var(--color-text-muted);
-  border-radius: 50%;
-  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1), background 0.3s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  display: none;
+  left: 6px;
+  top: 2px;
+  width: 4px;
+  height: 9px;
+  border: solid white;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
 }
 
 .dp-checkbox input:checked ~ .dp-checkmark {
-  background-color: rgba(239, 68, 68, 0.15); /* Soft danger tint */
+  background-color: var(--color-danger);
   border-color: var(--color-danger);
 }
 
 .dp-checkbox input:checked ~ .dp-checkmark::after {
-  transform: translateX(16px);
-  background: var(--color-danger);
+  display: block;
 }
 
 .dp-checkbox input:checked ~ span:last-child {
@@ -1646,4 +1644,12 @@ a {
   color: var(--color-bg);
   border-color: var(--color-accent);
   box-shadow: 0 0 12px rgba(167, 139, 250, 0.4);
+}
+.juz-btn.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  pointer-events: none;
+  background: var(--color-surface-3);
+  color: var(--color-text-muted);
+  border-color: var(--color-border);
 }
