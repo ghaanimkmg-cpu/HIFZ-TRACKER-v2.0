@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- SEO -->
+  <title>HIFZ TRACKER 2.0 — ZaryahPlus</title>
+  <meta
+    name="description"
+    content="Internal Hifz progress tracker for coordinators. Manage student memorization records across batch years."
+  />
+
+  <!-- Google Fonts — Inter (body) + Amiri (Arabic feel accent) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="live-bg" aria-hidden="true">
+    <span class="bg-particle" style="--x:10%; --y:15%; --s:1; --d:0s;"></span>
+    <span class="bg-particle" style="--x:25%; --y:85%; --s:0.6; --d:-5s;"></span>
+    <span class="bg-particle" style="--x:45%; --y:35%; --s:1.2; --d:-2s;"></span>
+    <span class="bg-particle" style="--x:60%; --y:70%; --s:0.8; --d:-8s;"></span>
+    <span class="bg-particle" style="--x:80%; --y:25%; --s:1.5; --d:-12s;"></span>
+    <span class="bg-particle" style="--x:90%; --y:65%; --s:0.7; --d:-3s;"></span>
+    <span class="bg-particle" style="--x:5%;  --y:55%; --s:1.1; --d:-15s;"></span>
+    <span class="bg-particle" style="--x:35%; --y:10%; --s:0.9; --d:-7s;"></span>
+    <span class="bg-particle" style="--x:70%; --y:90%; --s:1.3; --d:-1s;"></span>
+    <span class="bg-particle" style="--x:15%; --y:95%; --s:0.5; --d:-10s;"></span>
+    <span class="bg-particle" style="--x:55%; --y:45%; --s:1.4; --d:-18s;"></span>
+    <span class="bg-particle" style="--x:85%; --y:5%;  --s:0.8; --d:-4s;"></span>
+    <span class="bg-particle" style="--x:50%; --y:100%;--s:1;   --d:-6s;"></span>
+    <span class="bg-particle" style="--x:95%; --y:30%; --s:1.2; --d:-14s;"></span>
+    <span class="bg-particle" style="--x:20%; --y:40%; --s:0.7; --d:-9s;"></span>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       SPLASH SCREEN — ZaryahPlus brand intro
+       Removed from DOM by script.js after CSS exit animation ends.
+  ════════════════════════════════════════════════════════════ -->
+  <div id="splash" role="presentation" aria-hidden="true">
+
+    <!-- Floating gold particles -->
+    <div class="splash-particles">
+      <span class="sp" style="--x:7%;  --y:20%; --d:0.10s"></span>
+      <span class="sp" style="--x:88%; --y:16%; --d:0.40s"></span>
+      <span class="sp" style="--x:74%; --y:76%; --d:0.70s"></span>
+      <span class="sp" style="--x:18%; --y:80%; --d:0.20s"></span>
+      <span class="sp" style="--x:50%; --y:7%;  --d:0.90s"></span>
+      <span class="sp" style="--x:93%; --y:50%; --d:0.30s"></span>
+      <span class="sp" style="--x:5%;  --y:57%; --d:0.60s"></span>
+      <span class="sp" style="--x:63%; --y:91%; --d:0.00s"></span>
+      <span class="sp" style="--x:37%; --y:11%; --d:0.80s"></span>
+      <span class="sp" style="--x:82%; --y:40%; --d:0.50s"></span>
+      <span class="sp" style="--x:28%; --y:63%; --d:0.35s"></span>
+      <span class="sp" style="--x:56%; --y:33%; --d:0.65s"></span>
+    </div>
+
+    <!-- Central medallion: two rings + icon -->
+    <div class="splash-medallion">
+      <div class="splash-ring splash-ring--outer"></div>
+      <div class="splash-ring splash-ring--inner"></div>
+      <div class="splash-icon" aria-hidden="true">📖</div>
+    </div>
+
+    <!-- Brand text block -->
+    <div class="splash-text-group">
+      <div class="splash-title">HIFZ TRACKER</div>
+      <div class="splash-version">VERSION 2.0</div>
+      <div class="splash-sep"></div>
+      <div class="splash-brand">ZaryahPlus</div>
+    </div>
+
+  </div><!-- /#splash -->
+
+  <!-- ════════════════════════════════════════════════════════════
+       HEADER
+  ════════════════════════════════════════════════════════════ -->
+  <header class="app-header" role="banner">
+    <div class="header-inner">
+      <div class="brand">
+        <span class="brand-icon" aria-hidden="true">📖</span>
+        <div>
+          <h1 class="brand-title">HIFZ TRACKER</h1>
+          <span class="brand-sub">ZaryahPlus · v2.0</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <!-- Search -->
+        <div class="search-wrapper" role="search">
+          <span class="search-icon" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                 stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input
+            id="search-input"
+            type="search"
+            class="search-input"
+            placeholder="Search student…"
+            autocomplete="off"
+            aria-label="Search student by name"
+          />
+        </div>
+
+        <!-- Create Student -->
+        <button
+          id="btn-open-create-modal"
+          class="btn btn-primary"
+          aria-label="Create new student"
+        >
+          <span aria-hidden="true">+</span> Create Student
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════════════════
+       MAIN CONTENT — batch-year columns rendered by script.js
+  ════════════════════════════════════════════════════════════ -->
+  <main id="board" class="board" role="main" aria-label="Student batch board">
+    <!-- Populated dynamically by script.js — no hardcoded cards here -->
+    <div id="loading-state" class="state-message" aria-live="polite">
+      Loading students…
+    </div>
+  </main>
+
+  <!-- ════════════════════════════════════════════════════════════
+       CREATE STUDENT MODAL
+  ════════════════════════════════════════════════════════════ -->
+  <div
+    id="modal-create"
+    class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-create-title"
+    hidden
+  >
+    <div class="modal-card">
+      <div class="modal-header">
+        <h2 id="modal-create-title" class="modal-title">Create Student</h2>
+        <button
+          id="btn-close-create-modal"
+          class="btn-icon"
+          aria-label="Close modal"
+        >✕</button>
+      </div>
+
+      <form id="form-create-student" novalidate>
+
+        <div class="form-group">
+          <label class="form-label" for="create-full-name">Full Name</label>
+          <input
+            id="create-full-name"
+            name="full_name"
+            type="text"
+            class="form-input"
+            placeholder="e.g. Ahmed Ali"
+            required
+            maxlength="120"
+          />
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="create-batch-year">Batch Year</label>
+          <select id="create-batch-year" name="batch_year" class="form-select" required>
+            <!-- Populated by script.js -->
+          </select>
+        </div>
+
+
+        <div id="create-error" class="form-error" role="alert" hidden></div>
+
+        <div class="modal-footer">
+          <button type="submit" id="btn-create-submit" class="btn btn-primary btn-full">
+            Create Student
+          </button>
+        </div>
+
+      </form>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       HISTORY MODAL — shown when "Record 🕒" is clicked
+  ════════════════════════════════════════════════════════════ -->
+  <div
+    id="modal-history"
+    class="history-modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="history-modal-title"
+    hidden
+  >
+    <div class="history-modal-card">
+      <div class="history-modal-header">
+        <div class="history-modal-title-group">
+          <h2 id="history-modal-title" class="history-modal-title">Progress Record</h2>
+          <span id="history-modal-subtitle" class="history-modal-subtitle">—</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="history-modal-badge" class="history-modal-badge">0 entries</span>
+          <button id="btn-close-history-modal" class="btn-icon" aria-label="Close record">✕</button>
+        </div>
+      </div>
+      <div class="history-modal-body" id="history-modal-body">
+        <!-- Populated by script.js -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════════════════════════════════
+       UPDATE PROGRESS MODAL
+  ════════════════════════════════════════════════════════════ -->
+  <div
+    id="modal-update"
+    class="modal-overlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modal-update-title"
+    hidden
+  >
+    <div class="modal-card">
+      <div class="modal-header">
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <h2 id="modal-update-title" class="modal-title">Update Progress</h2>
+          <span id="modal-update-subtitle" style="font-size: var(--font-size-xs); color: var(--color-text-muted);">—</span>
+        </div>
+        <button
+          id="btn-close-update-modal"
+          class="btn-icon"
+          aria-label="Close update form"
+        >✕</button>
+      </div>
+
+      <form id="form-update-student" novalidate>
+        <!-- Juz select injected dynamically -->
+        <div class="form-group" id="update-juz-group"></div>
+        
+        <!-- Surah select injected dynamically -->
+        <div class="form-group" id="update-surah-group"></div>
+
+        <div class="form-row" style="gap:var(--space-4); margin-top:var(--space-2);">
+          <div class="form-group">
+            <label class="form-label" for="update-ayah">Ayah</label>
+            <input
+              id="update-ayah"
+              name="current_ayah"
+              type="text"
+              class="form-input"
+              placeholder="e.g. 2-7"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="update-date">Date</label>
+            <input
+              id="update-date"
+              name="update_date"
+              type="date"
+              class="form-input"
+              required
+            />
+          </div>
+        </div>
+
+        <div id="update-error" class="form-error" role="alert" hidden style="margin-top:var(--space-3);"></div>
+        
+        <div class="modal-footer" style="display:flex; gap:var(--space-3); align-items:center;">
+          <button type="submit" id="btn-update-submit" class="btn btn-primary" style="flex:1;">Save Update</button>
+          <button type="button" id="btn-delete-student" class="btn btn-danger" aria-label="Delete Student" title="Delete Student">Delete</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Script at end of body — no defer needed -->
+  <script src="script.js?v=2.0.8"></script>
+</body>
+</html>
