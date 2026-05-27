@@ -29,8 +29,13 @@ from models import (
     get_all_students,
     update_student_progress,
     get_student_history,
+    get_student_by_id,
+    get_memorized_juz,
+    create_daily_progress,
+    get_student_daily_progress,
 )
-from schemas import StudentCreate, StudentResponse, StudentUpdate, HistoryResponse
+from schemas import StudentCreate, StudentResponse, StudentUpdate, HistoryResponse, DailyProgressCreate, DailyProgressRecordResponse
+from constants import SURAH_AYAHS, JUZ_SURAHS, SURAH_ORDER
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
@@ -90,6 +95,7 @@ def add_student(payload: StudentCreate) -> dict[str, Any]:
         current_juz=payload.current_juz,
         current_surah=payload.current_surah,
         current_ayah=payload.current_ayah,
+        previous_juz=",".join(map(str, payload.previous_juz))
     )
     return student
 
@@ -150,3 +156,84 @@ def remove_student(student_id: int) -> None:
             detail=f"Student with id {student_id} not found.",
         )
     # 204 — no response body
+
+@app.get(
+    "/students/{student_id}/daily-progress",
+    response_model=list[DailyProgressRecordResponse],
+    tags=["Students"],
+)
+def get_daily_progress(student_id: int) -> list[dict[str, Any]]:
+    """
+    GET /students/{student_id}/daily-progress
+    Return all comprehensive daily progress records (Sabaq, Sabaq Para, Para, Comments) for a student.
+    """
+    student = get_student_by_id(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found")
+    return get_student_daily_progress(student_id)
+
+@app.post(
+    "/students/{student_id}/daily-progress",
+    status_code=201,
+    tags=["Daily Progress"],
+)
+def add_daily_progress(student_id: int, payload: DailyProgressCreate) -> dict[str, Any]:
+    """
+    POST /students/{student_id}/daily-progress
+    Submit a daily progress update (SABAQ, SABAQ PARA, PARA).
+    """
+    student = get_student_by_id(student_id)
+    if not student:
+        raise HTTPException(status_code=404, detail="Student not found.")
+        
+    memorized_juz = get_memorized_juz(student_id)
+    
+    # Parse the student's current_ayah bounds
+    try:
+        parts = student["current_ayah"].split("-")
+        student_current_ayah_upper = int(parts[1])
+    except:
+        student_current_ayah_upper = 286
+
+    for rec in payload.records:
+        if rec.not_recited:
+            continue
+            
+        if not rec.juz or not rec.surah or not rec.start_ayah or not rec.end_ayah:
+            raise HTTPException(status_code=422, detail="Missing fields for recited record.")
+            
+        if rec.surah not in SURAH_AYAHS:
+            raise HTTPException(status_code=422, detail=f"Invalid surah {rec.surah}.")
+            
+        max_ayahs = SURAH_AYAHS[rec.surah]
+        if rec.start_ayah < 1 or rec.end_ayah > max_ayahs or rec.start_ayah > rec.end_ayah:
+            raise HTTPException(status_code=422, detail=f"Invalid ayah bounds for {rec.surah}. Max is {max_ayahs}.")
+
+        if rec.type == "SABAQ":
+            pass # SABAQ logic is just bounds validation
+            
+        elif rec.type == "SABAQ PARA":
+            if rec.juz != student["current_juz"]:
+                raise HTTPException(status_code=422, detail="SABAQ PARA juz must match current juz.")
+            
+            target_order = SURAH_ORDER.get(rec.surah, 999)
+            current_order = SURAH_ORDER.get(student["current_surah"], 999)
+            
+            if target_order > current_order:
+                raise HTTPException(status_code=422, detail=f"Cannot revise future surah {rec.surah}.")
+            elif target_order == current_order:
+                if rec.end_ayah > student_current_ayah_upper:
+                    raise HTTPException(status_code=422, detail=f"Cannot exceed memorized ayah {student_current_ayah_upper}.")
+                
+        elif rec.type == "PARA":
+            if rec.juz not in memorized_juz:
+                raise HTTPException(status_code=422, detail=f"Juz {rec.juz} not in memorized history.")
+                
+        else:
+            raise HTTPException(status_code=422, detail=f"Unknown record type {rec.type}")
+
+    # Convert Pydantic models to dicts and save
+    dicts = [r.model_dump() for r in payload.records]
+    create_daily_progress(student_id, payload.date, dicts, payload.comment)
+    
+    return {"status": "ok", "message": "Records saved successfully."}

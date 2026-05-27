@@ -65,6 +65,10 @@ class StudentCreate(BaseModel):
         ...,
         description="Ayah range (e.g. '2-7').",
     )
+    previous_juz: list[int] = Field(
+        default_factory=list,
+        description="List of previously memorized juz numbers.",
+    )
 
     @field_validator("full_name", mode="before")
     @classmethod
@@ -145,6 +149,7 @@ class StudentResponse(BaseModel):
     current_juz: int
     current_surah: str
     current_ayah: str
+    previous_juz: str | None = None
     last_updated: str
     created_at: str
 
@@ -154,3 +159,33 @@ class ErrorResponse(BaseModel):
     """Standard error envelope returned on failures."""
 
     error: str
+
+class DailyRecordItem(BaseModel):
+    """A single progress update record in a daily submission."""
+    type: str = Field(..., description="SABAQ, SABAQ PARA, or PARA")
+    juz: int | None = None
+    surah: str | None = None
+    start_ayah: int | None = None
+    end_ayah: int | None = None
+    not_recited: bool = False
+
+class DailyProgressCreate(BaseModel):
+    """Payload for submitting a daily progress update."""
+    date: str = Field(..., description="ISO Date string")
+    records: list[DailyRecordItem] = Field(..., min_length=1)
+    comment: str | None = None
+
+class DailyProgressRecordResponse(BaseModel):
+    """A single daily progress record returned by the API."""
+    id: int
+    date: str
+    type: str
+    juz: int | None
+    surah: str | None
+    start_ayah: int | None
+    end_ayah: int | None
+    comment: str | None
+    not_recited: bool
+    created_at: str
+
+    model_config = {"from_attributes": True}

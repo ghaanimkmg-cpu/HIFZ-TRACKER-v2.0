@@ -177,7 +177,27 @@
           </select>
         </div>
 
-
+        <div class="form-group">
+          <label class="form-label" for="create-start-juz">Current / Starting Juz</label>
+          <select id="create-start-juz" class="form-select" required>
+            <!-- Populated by script.js -->
+          </select>
+        </div>
+        
+        <div class="form-group" style="margin-top: var(--space-4);">
+          <label class="form-label" style="display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;">
+            <input type="checkbox" id="create-has-previous-juz" style="width: 16px; height: 16px; accent-color: var(--color-accent);">
+            <span style="font-weight: 500;">Has this student already memorized any Para?</span>
+          </label>
+        </div>
+        
+        <div id="create-previous-juz-section" class="form-group" style="display: none; margin-top: var(--space-3); padding: var(--space-3); background: var(--color-surface-2); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+          <label class="form-label" style="margin-bottom: var(--space-3);">Select all previously memorized Para</label>
+          <div id="create-juz-grid" class="juz-grid">
+            <!-- 30 juz buttons injected by JS -->
+          </div>
+        </div>
+        
         <div id="create-error" class="form-error" role="alert" hidden></div>
 
         <div class="modal-footer">
@@ -242,44 +262,87 @@
         >✕</button>
       </div>
 
-      <form id="form-update-student" novalidate>
-        <!-- Juz select injected dynamically -->
-        <div class="form-group" id="update-juz-group"></div>
+      <form id="form-daily-progress" novalidate>
         
-        <!-- Surah select injected dynamically -->
-        <div class="form-group" id="update-surah-group"></div>
-
-        <div class="form-row" style="gap:var(--space-4); margin-top:var(--space-2);">
-          <div class="form-group">
-            <label class="form-label" for="update-ayah">Ayah</label>
-            <input
-              id="update-ayah"
-              name="current_ayah"
-              type="text"
-              class="form-input"
-              placeholder="e.g. 2-7"
-              required
-            />
+        <div class="dp-section">
+          <div class="dp-section-header">
+            <h3 class="dp-title">SABAQ</h3>
+            <label class="dp-checkbox">
+              <input type="checkbox" id="dp-sabaq-not-recited">
+              <span class="dp-checkmark"></span> Not Recited
+            </label>
           </div>
-          <div class="form-group">
-            <label class="form-label" for="update-date">Date</label>
-            <input
-              id="update-date"
-              name="update_date"
-              type="date"
-              class="form-input"
-              required
-            />
+          <div class="dp-grid" id="dp-sabaq-fields">
+            <div class="form-group" id="dp-sabaq-juz-group"></div>
+            <div class="form-group" id="dp-sabaq-surah-group"></div>
+            <div class="form-group">
+              <label class="form-label" for="dp-sabaq-start">Start Ayah</label>
+              <input type="number" id="dp-sabaq-start" class="form-input" min="1" placeholder="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="dp-sabaq-end">End Ayah</label>
+              <input type="number" id="dp-sabaq-end" class="form-input" min="1" placeholder="10">
+            </div>
           </div>
         </div>
 
-        <div id="update-error" class="form-error" role="alert" hidden style="margin-top:var(--space-3);"></div>
+        <div class="dp-section" id="dp-sp-section">
+          <div class="dp-section-header">
+            <h3 class="dp-title">SABAQ PARA</h3>
+            <label class="dp-checkbox">
+              <input type="checkbox" id="dp-sp-not-recited">
+              <span class="dp-checkmark"></span> Not Recited
+            </label>
+          </div>
+          <div class="dp-grid" id="dp-sp-fields">
+            <div class="form-group">
+              <label class="form-label">Juz</label>
+              <input type="text" id="dp-sp-juz" class="form-input disabled-input" readonly>
+            </div>
+            <div class="form-group" id="dp-sp-surah-group"></div>
+            <div class="form-group">
+              <label class="form-label" for="dp-sp-start">Start Ayah</label>
+              <input type="number" id="dp-sp-start" class="form-input" min="1" placeholder="1">
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="dp-sp-end">End Ayah</label>
+              <input type="number" id="dp-sp-end" class="form-input" min="1" placeholder="10">
+            </div>
+          </div>
+        </div>
+
+        <div class="dp-section" id="dp-para-section">
+          <div class="dp-section-header">
+            <h3 class="dp-title">PARA</h3>
+          </div>
+          <div id="para-entries-container"></div>
+          <button type="button" id="btn-add-para" class="btn btn-secondary" style="margin-top:var(--space-2); padding:var(--space-2); font-size:var(--font-size-sm);">+ Add Para Entry</button>
+        </div>
+
+        <div class="dp-section" style="border-bottom:none;">
+          <label class="form-label" for="dp-comment">Comment</label>
+          <textarea id="dp-comment" class="form-input" rows="2" placeholder="Notes for today..."></textarea>
+        </div>
+
+        <div class="form-row" style="margin-top:var(--space-2);">
+          <div class="form-group">
+            <label class="form-label" for="dp-date">Date</label>
+            <input type="date" id="dp-date" class="form-input" required>
+          </div>
+        </div>
+
+        <div id="dp-error" class="form-error" role="alert" hidden style="margin-top:var(--space-3);"></div>
         
         <div class="modal-footer" style="display:flex; gap:var(--space-3); align-items:center;">
-          <button type="submit" id="btn-update-submit" class="btn btn-primary" style="flex:1;">Save Update</button>
-          <button type="button" id="btn-delete-student" class="btn btn-danger" aria-label="Delete Student" title="Delete Student">Delete</button>
+          <button type="submit" id="btn-dp-submit" class="btn btn-primary" style="flex:1;">Submit Daily Progress</button>
         </div>
       </form>
+
+
+
+      <div style="margin-top: var(--space-4); border-top: 1px solid var(--color-border); padding-top: var(--space-4);">
+          <button type="button" id="btn-delete-student" class="btn btn-danger" aria-label="Delete Student" title="Delete Student" style="width: 100%;">Delete Student Permanently</button>
+      </div>
     </div>
   </div>
 

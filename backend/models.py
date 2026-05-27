@@ -49,6 +49,7 @@ def create_student(
     current_juz: int,
     current_surah: str,
     current_ayah: str,
+    previous_juz: str = "",
 ) -> dict[str, Any]:
     """
     Insert a new student row and return the complete record.
@@ -61,11 +62,11 @@ def create_student(
         """
         INSERT INTO students
             (full_name, batch_year, current_juz, current_surah, current_ayah,
-             last_updated, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+             previous_juz, last_updated, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (full_name, batch_year, current_juz, current_surah, current_ayah,
-         now_iso, now_iso),
+         previous_juz, now_iso, now_iso),
     )
     conn.commit()
     new_id = cursor.lastrowid
@@ -145,3 +146,80 @@ def delete_student(student_id: int) -> bool:
     affected = cursor.rowcount
     conn.close()
     return affected > 0
+
+def get_memorized_juz(student_id: int) -> list[int]:
+    """
+    Return a list of all unique Juz numbers the student has ever interacted with,
+    including their current_juz and any juz found in progress_history and daily_progress_records.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT current_juz, previous_juz FROM students WHERE id = ?", (student_id,))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return []
+    
+    juz_set = {row["current_juz"]}
+    if row["previous_juz"]:
+        for j in row["previous_juz"].split(","):
+            try:
+                juz_set.add(int(j.strip()))
+            except ValueError:
+                pass
+    
+    cursor.execute("SELECT DISTINCT juz FROM progress_history WHERE student_id = ?", (student_id,))
+    for r in cursor.fetchall():
+        if r["juz"] is not None:
+            juz_set.add(r["juz"])
+            
+    cursor.execute("SELECT DISTINCT juz FROM daily_progress_records WHERE student_id = ? AND juz IS NOT NULL", (student_id,))
+    for r in cursor.fetchall():
+        juz_set.add(r["juz"])
+        
+    conn.close()
+    return sorted(list(juz_set))
+
+def create_daily_progress(student_id: int, date: str, records: list[dict], comment: str | None = None) -> None:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    for rec in records:
+        cursor.execute(
+            """
+            INSERT INTO daily_progress_records
+                (student_id, date, type, juz, surah, start_ayah, end_ayah, comment, not_recited, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                student_id,
+                date,
+                rec["type"],
+                rec.get("juz"),
+                rec.get("surah"),
+                rec.get("start_ayah"),
+                rec.get("end_ayah"),
+                comment,
+                1 if rec.get("not_recited") else 0,
+                now_iso
+            )
+        )
+    conn.commit()
+    conn.close()
+
+def get_student_daily_progress(student_id: int) -> list[dict]:
+    """Fetch all daily progress records for a student."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT * FROM daily_progress_records 
+        WHERE student_id = ? 
+        ORDER BY date DESC, id DESC
+    """, (student_id,))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    return [{"not_recited": bool(row["not_recited"]), **dict(row)} for row in rows]

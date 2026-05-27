@@ -152,6 +152,10 @@ const formCreate         = document.getElementById('form-create-student');
 const createError        = document.getElementById('create-error');
 
 const selCreateBatch     = document.getElementById('create-batch-year');
+const selCreateStartJuz  = document.getElementById('create-start-juz');
+const createHasPreviousJuz = document.getElementById('create-has-previous-juz');
+const createPreviousJuzSection = document.getElementById('create-previous-juz-section');
+const createJuzGrid      = document.getElementById('create-juz-grid');
 
 // History modal
 const modalHistory           = document.getElementById('modal-history');
@@ -201,12 +205,30 @@ const updateError           = document.getElementById('update-error');
 const btnUpdateSubmit       = document.getElementById('btn-update-submit');
 const btnDeleteStudent      = document.getElementById('btn-delete-student');
 
+// Daily Progress Tab References
+const formDailyProgress     = document.getElementById('form-daily-progress');
+const dpSabaqNotRecited     = document.getElementById('dp-sabaq-not-recited');
+const dpSpNotRecited        = document.getElementById('dp-sp-not-recited');
+const dpSabaqJuzGroup       = document.getElementById('dp-sabaq-juz-group');
+const dpSabaqSurahGroup     = document.getElementById('dp-sabaq-surah-group');
+const dpSpJuzInput          = document.getElementById('dp-sp-juz');
+const dpSpSurahGroup        = document.getElementById('dp-sp-surah-group');
+const paraEntriesContainer  = document.getElementById('para-entries-container');
+const btnAddPara            = document.getElementById('btn-add-para');
+const dpDateInput           = document.getElementById('dp-date');
+const dpCommentInput        = document.getElementById('dp-comment');
+const dpError               = document.getElementById('dp-error');
+const btnDpSubmit           = document.getElementById('btn-dp-submit');
+
 let currentUpdateStudent = null;
+let currentMemorizedAyahsSet = {}; // Tracks exact Ayahs memorized per Surah for strict validation
+let currentMemorizedJuz = [];
 
 function closeUpdateModal() {
   modalUpdate.setAttribute('hidden', '');
   document.body.style.overflow = '';
   currentUpdateStudent = null;
+  currentMemorizedJuz = [];
 }
 
 btnCloseUpdateModal.addEventListener('click', closeUpdateModal);
@@ -215,122 +237,425 @@ modalUpdate.addEventListener('click', (e) => {
   if (e.target === modalUpdate) closeUpdateModal();
 });
 
-function openUpdateModal(student) {
+async function openUpdateModal(student) {
   currentUpdateStudent = student;
   updateModalSubtitle.textContent = student.full_name;
-  updateError.hidden = true;
-  btnUpdateSubmit.disabled = false;
-  btnUpdateSubmit.textContent = 'Save Update';
+  dpError.hidden = true;
+  
+  btnDpSubmit.disabled = false;
+  btnDpSubmit.textContent = 'Submit Daily Progress';
   btnDeleteStudent.disabled = false;
   btnDeleteStudent.textContent = 'Delete';
 
-  // Build selects
-  updateJuzGroup.innerHTML = '';
-  const juzLabel = document.createElement('label');
-  juzLabel.className = 'form-label';
-  juzLabel.htmlFor = 'modal-update-juz';
-  juzLabel.textContent = 'Juz';
-  const juzSel = buildJuzSelect(student.current_juz);
-  juzSel.id   = 'modal-update-juz';
-  juzSel.name = 'current_juz';
-  updateJuzGroup.appendChild(juzLabel);
-  updateJuzGroup.appendChild(juzSel);
+  const todayDate = new Date().toISOString().split('T')[0];
 
-  updateSurahGroup.innerHTML = '';
-  const surahLabel = document.createElement('label');
-  surahLabel.className = 'form-label';
-  surahLabel.htmlFor = 'modal-update-surah';
-  surahLabel.textContent = 'Surah';
-  const surahSel = buildSurahSelect(student.current_surah);
-  surahSel.id   = 'modal-update-surah';
-  surahSel.name = 'current_surah';
-  updateSurahGroup.appendChild(surahLabel);
-  updateSurahGroup.appendChild(surahSel);
+  // --- DAILY PROGRESS FORM ---
+  formDailyProgress.reset();
+  dpDateInput.value = todayDate; // Re-set after reset()
+  
+  // Sabaq Dropdowns
+  dpSabaqJuzGroup.innerHTML = '';
+  const dpSabaqJuzLabel = document.createElement('label');
+  dpSabaqJuzLabel.className = 'form-label';
+  dpSabaqJuzLabel.textContent = 'Juz';
+  const dpSabaqJuzSel = buildJuzSelect(student.current_juz);
+  dpSabaqJuzSel.id = 'dp-sabaq-juz';
+  dpSabaqJuzGroup.appendChild(dpSabaqJuzLabel);
+  dpSabaqJuzGroup.appendChild(dpSabaqJuzSel);
+  
+  dpSabaqSurahGroup.innerHTML = '';
+  const dpSabaqSurahLabel = document.createElement('label');
+  dpSabaqSurahLabel.className = 'form-label';
+  dpSabaqSurahLabel.textContent = 'Surah';
+  const dpSabaqSurahSel = buildSurahSelect(student.current_surah);
+  dpSabaqSurahSel.id = 'dp-sabaq-surah';
+  dpSabaqSurahGroup.appendChild(dpSabaqSurahLabel);
+  dpSabaqSurahGroup.appendChild(dpSabaqSurahSel);
 
-  // Set ayah & date
-  updateAyahInput.value = student.current_ayah;
-  updateDateInput.value = new Date().toISOString().split('T')[0];
+  filterSurahsByJuz(student.current_juz, dpSabaqSurahSel, student.current_surah);
+  dpSabaqJuzSel.addEventListener('change', () => filterSurahsByJuz(parseInt(dpSabaqJuzSel.value, 10), dpSabaqSurahSel));
 
-  // Logic
-  filterSurahsByJuz(student.current_juz, surahSel, student.current_surah);
-  limitAyahBySurah(student.current_surah, updateAyahInput);
+  // Sabaq Para Dropdowns (Juz is locked)
+  dpSpJuzInput.value = `Juz ${student.current_juz}`;
+  dpSpJuzInput.dataset.val = student.current_juz;
 
-  juzSel.addEventListener('change', () => {
-    filterSurahsByJuz(parseInt(juzSel.value, 10), surahSel);
-    limitAyahBySurah(surahSel.value, updateAyahInput);
-  });
+  dpSpSurahGroup.innerHTML = '';
+  const dpSpSurahLabel = document.createElement('label');
+  dpSpSurahLabel.className = 'form-label';
+  dpSpSurahLabel.textContent = 'Surah';
+  const dpSpSurahSel = buildSurahSelect(student.current_surah);
+  dpSpSurahSel.id = 'dp-sp-surah';
+  dpSpSurahGroup.appendChild(dpSpSurahLabel);
+  dpSpSurahGroup.appendChild(dpSpSurahSel);
+  filterSurahsByJuz(student.current_juz, dpSpSurahSel, student.current_surah);
 
-  surahSel.addEventListener('change', () => {
-    limitAyahBySurah(surahSel.value, updateAyahInput);
-  });
+  // Fetch memorized juz for PARA dropdowns
+  paraEntriesContainer.innerHTML = '<div style="color:var(--color-text-muted); font-size:12px;">Loading memorized juz...</div>';
+  try {
+    const [history, dailyProgress] = await Promise.all([
+      apiFetch(`/students/${student.id}/history`),
+      apiFetch(`/students/${student.id}/daily-progress`)
+    ]);
+    
+    currentMemorizedAyahsSet = {};
+    const addAyahsToSet = (surah, start, end) => {
+        if (!currentMemorizedAyahsSet[surah]) {
+            currentMemorizedAyahsSet[surah] = new Set();
+        }
+        for (let i = start; i <= end; i++) {
+            currentMemorizedAyahsSet[surah].add(i);
+        }
+    };
+    
+    const juzSet = new Set();
+    let hasCurrentJuzHistory = false;
+    
+    // Phase G: Add previous juz to the PARA dropdown
+    if (student.previous_juz) {
+        student.previous_juz.split(',').forEach(j => {
+            const num = parseInt(j.trim(), 10);
+            if (!isNaN(num) && num !== student.current_juz) {
+                juzSet.add(num);
+            }
+        });
+    }
+
+    history.forEach(h => {
+        if (h.juz === student.current_juz) {
+            hasCurrentJuzHistory = true;
+        } else if (h.juz) {
+            juzSet.add(h.juz);
+        }
+        
+        // Phase F.1: Map exact ayahs from legacy history
+        if (h.surah && h.ayah) {
+            const match = String(h.ayah).match(/(\d+)-(\d+)/);
+            if (match) {
+                let sA = parseInt(match[1], 10);
+                let eA = parseInt(match[2], 10);
+                if (!isNaN(sA) && !isNaN(eA)) addAyahsToSet(h.surah, sA, eA);
+            } else {
+                // If it's a single number, assume it's just that ayah or 1 to that ayah. We'll do 1 to that ayah to be safe for legacy.
+                let eA = parseInt(h.ayah, 10);
+                if (!isNaN(eA)) addAyahsToSet(h.surah, 1, eA);
+            }
+        }
+    });
+    
+    dailyProgress.forEach(dp => {
+        // We only care about SABAQ entries that were actually recited
+        if (dp.type === 'SABAQ' && !dp.not_recited && dp.surah && dp.start_ayah && dp.end_ayah) {
+            let sA = parseInt(dp.start_ayah, 10);
+            let eA = parseInt(dp.end_ayah, 10);
+            if (!isNaN(sA) && !isNaN(eA)) {
+                addAyahsToSet(dp.surah, sA, eA);
+            }
+        }
+    });
+
+    currentMemorizedJuz = Array.from(juzSet).sort((a,b) => a - b);
+    paraEntriesContainer.innerHTML = ''; // Clear loading
+
+    // --- PHASE D: DYNAMIC LOCKING ---
+
+    // 1. SABAQ PARA Locking (First Lesson Rule)
+    const dpSpSection = document.getElementById('dp-sp-section');
+    const existingSpOverlay = document.getElementById('sp-locked-overlay');
+    if (existingSpOverlay) existingSpOverlay.remove();
+    
+    if (!hasCurrentJuzHistory) {
+        dpSpSection.classList.add('locked');
+        const overlay = document.createElement('div');
+        overlay.id = 'sp-locked-overlay';
+        overlay.className = 'locked-overlay';
+        overlay.innerHTML = `<div class="locked-icon">🔒</div><div class="locked-text">FIRST LESSON IN JUZ ${student.current_juz}</div>`;
+        dpSpSection.appendChild(overlay);
+        
+        // Force "Not Recited" to safely exclude from submission payload
+        dpSpNotRecited.checked = true;
+        dpSpNotRecited.dispatchEvent(new Event('change'));
+    } else {
+        dpSpSection.classList.remove('locked');
+        
+        // Reset to default
+        dpSpNotRecited.checked = false;
+        dpSpNotRecited.dispatchEvent(new Event('change'));
+    }
+
+    // 2. PARA Locking (Completed Juz Rule)
+    const dpParaSection = document.getElementById('dp-para-section');
+    const existingParaOverlay = document.getElementById('para-locked-overlay');
+    if (existingParaOverlay) existingParaOverlay.remove();
+    
+    if (currentMemorizedJuz.length === 0) {
+        dpParaSection.classList.add('locked');
+        const overlay = document.createElement('div');
+        overlay.id = 'para-locked-overlay';
+        overlay.className = 'locked-overlay';
+        overlay.innerHTML = `<div class="locked-icon">🔒</div><div class="locked-text">NO COMPLETED JUZ YET</div>`;
+        dpParaSection.appendChild(overlay);
+    } else {
+        dpParaSection.classList.remove('locked');
+    }
+  } catch (err) {
+    paraEntriesContainer.innerHTML = '<div class="form-error">Failed to load history</div>';
+  }
 
   modalUpdate.removeAttribute('hidden');
   document.body.style.overflow = 'hidden';
 }
 
-formUpdate.addEventListener('submit', async (e) => {
+// --- DAILY PROGRESS UI LOGIC ---
+
+dpSabaqNotRecited.addEventListener('change', (e) => {
+  const disabled = e.target.checked;
+  const inputs = document.getElementById('dp-sabaq-fields').querySelectorAll('select, input');
+  inputs.forEach(inp => {
+    inp.disabled = disabled;
+    if (disabled) inp.classList.add('disabled-input');
+    else inp.classList.remove('disabled-input');
+  });
+});
+
+dpSpNotRecited.addEventListener('change', (e) => {
+  const disabled = e.target.checked;
+  const fieldsContainer = document.getElementById('dp-sp-fields');
+  const selects = fieldsContainer.querySelectorAll('select');
+  const inputs = fieldsContainer.querySelectorAll('input[type="number"]');
+  [...selects, ...inputs].forEach(inp => {
+    inp.disabled = disabled;
+    if (disabled) inp.classList.add('disabled-input');
+    else inp.classList.remove('disabled-input');
+  });
+});
+
+let paraEntryCount = 0;
+btnAddPara.addEventListener('click', () => {
+  if (currentMemorizedJuz.length === 0) {
+    alert("This student has no memorized juz on record yet.");
+    return;
+  }
+  
+  paraEntryCount++;
+  const id = `para-${paraEntryCount}`;
+  
+  const card = document.createElement('div');
+  card.className = 'para-entry-card dp-grid';
+  card.id = id;
+  
+  const closeBtn = document.createElement('button');
+  closeBtn.type = 'button';
+  closeBtn.className = 'btn-remove-para';
+  closeBtn.innerHTML = '✕';
+  closeBtn.onclick = () => card.remove();
+  
+  const juzGroup = document.createElement('div');
+  juzGroup.className = 'form-group';
+  const juzLabel = document.createElement('label');
+  juzLabel.className = 'form-label';
+  juzLabel.textContent = 'Juz';
+  const juzSel = document.createElement('select');
+  juzSel.className = 'form-select dp-para-juz-sel';
+  currentMemorizedJuz.forEach(j => {
+    const opt = document.createElement('option');
+    opt.value = j;
+    opt.textContent = `Juz ${j}`;
+    juzSel.appendChild(opt);
+  });
+  juzGroup.appendChild(juzLabel);
+  juzGroup.appendChild(juzSel);
+  
+  const surahGroup = document.createElement('div');
+  surahGroup.className = 'form-group';
+  const surahLabel = document.createElement('label');
+  surahLabel.className = 'form-label';
+  surahLabel.textContent = 'Surah';
+  const surahSel = document.createElement('select');
+  surahSel.className = 'form-select dp-para-surah-sel';
+  surahGroup.appendChild(surahLabel);
+  surahGroup.appendChild(surahSel);
+  
+  const startGroup = document.createElement('div');
+  startGroup.className = 'form-group';
+  startGroup.innerHTML = `<label class="form-label">Start Ayah</label><input type="number" class="form-input dp-para-start" min="1">`;
+  
+  const endGroup = document.createElement('div');
+  endGroup.className = 'form-group';
+  endGroup.innerHTML = `<label class="form-label">End Ayah</label><input type="number" class="form-input dp-para-end" min="1">`;
+  
+  const notRecitedGroup = document.createElement('div');
+  notRecitedGroup.className = 'form-group';
+  notRecitedGroup.style.gridColumn = "1 / -1";
+  notRecitedGroup.innerHTML = `
+    <label class="dp-checkbox" style="margin-top:var(--space-2);">
+      <input type="checkbox" class="dp-para-not-recited">
+      <span class="dp-checkmark"></span> Not Recited Today
+    </label>
+  `;
+  
+  card.appendChild(closeBtn);
+  card.appendChild(juzGroup);
+  card.appendChild(surahGroup);
+  card.appendChild(startGroup);
+  card.appendChild(endGroup);
+  card.appendChild(notRecitedGroup);
+  
+  paraEntriesContainer.appendChild(card);
+  
+  filterSurahsByJuz(parseInt(juzSel.value, 10), surahSel);
+  juzSel.addEventListener('change', () => filterSurahsByJuz(parseInt(juzSel.value, 10), surahSel));
+  
+  const checkbox = card.querySelector('.dp-para-not-recited');
+  checkbox.addEventListener('change', (e) => {
+    const disabled = e.target.checked;
+    [juzSel, surahSel, card.querySelector('.dp-para-start'), card.querySelector('.dp-para-end')].forEach(inp => {
+      inp.disabled = disabled;
+      if (disabled) inp.classList.add('disabled-input');
+      else inp.classList.remove('disabled-input');
+    });
+  });
+});
+
+// --- SUBMIT DAILY PROGRESS & OPTION B ---
+formDailyProgress.addEventListener('submit', async (e) => {
   e.preventDefault();
   if (!currentUpdateStudent) return;
+  dpError.hidden = true;
 
-  updateError.hidden = true;
-
-  const juzSel = document.getElementById('modal-update-juz');
-  const surahSel = document.getElementById('modal-update-surah');
-
-  const juz   = parseInt(juzSel.value, 10);
-  const surah = surahSel.value;
-  const ayahStr = updateAyahInput.value.trim();
-  const updateDate = updateDateInput.value;
-
-  if (!surah || !ayahStr || !updateDate) {
-    updateError.textContent = 'Please fill all fields correctly.';
-    updateError.hidden = false;
+  const records = [];
+  
+  // Parse Sabaq
+  const sabaqNotRecited = dpSabaqNotRecited.checked;
+  const sabaqJuz = parseInt(document.getElementById('dp-sabaq-juz').value, 10);
+  const sabaqSurah = document.getElementById('dp-sabaq-surah').value;
+  const sabaqStart = parseInt(document.getElementById('dp-sabaq-start').value, 10);
+  const sabaqEnd = parseInt(document.getElementById('dp-sabaq-end').value, 10);
+  
+  if (!sabaqNotRecited && (!sabaqStart || !sabaqEnd)) {
+    dpError.textContent = "Please fill Sabaq ayahs.";
+    dpError.hidden = false;
     return;
   }
-
-  let startAyah = 0;
-  let endAyah = 0;
-  if (/^\d+-\d+$/.test(ayahStr)) {
-    const parts = ayahStr.split('-');
-    startAyah = parseInt(parts[0], 10);
-    endAyah = parseInt(parts[1], 10);
-    if (startAyah > endAyah) {
-      updateError.textContent = 'Invalid range. Start ayah cannot be greater than end ayah.';
-      updateError.hidden = false;
+  
+  records.push({
+    type: "SABAQ",
+    juz: sabaqNotRecited ? null : sabaqJuz,
+    surah: sabaqNotRecited ? null : sabaqSurah,
+    start_ayah: sabaqNotRecited ? null : sabaqStart,
+    end_ayah: sabaqNotRecited ? null : sabaqEnd,
+    not_recited: sabaqNotRecited
+  });
+  
+  // Parse Sabaq Para
+  const spNotRecited = dpSpNotRecited.checked;
+  const spJuz = parseInt(dpSpJuzInput.dataset.val, 10);
+  const spSurah = document.getElementById('dp-sp-surah').value;
+  const spStart = parseInt(document.getElementById('dp-sp-start').value, 10);
+  const spEnd = parseInt(document.getElementById('dp-sp-end').value, 10);
+  
+  if (!spNotRecited) {
+    if (!spStart || !spEnd) {
+      dpError.textContent = "Please fill Sabaq Para ayahs.";
+      dpError.hidden = false;
       return;
     }
-  } else {
-    updateError.textContent = "Ayah must be a range (e.g. '2-7'). Single numbers are not allowed.";
-    updateError.hidden = false;
-    return;
+    
+    // Phase F.1: Validate against EXACT memorized ayahs
+    const memorizedSet = currentMemorizedAyahsSet[spSurah] || new Set();
+    const missingAyahs = [];
+    for (let i = spStart; i <= spEnd; i++) {
+        if (!memorizedSet.has(i)) {
+            missingAyahs.push(i);
+        }
+    }
+    
+    if (missingAyahs.length > 0) {
+      const missingRanges = formatMissingRanges(missingAyahs);
+      dpError.textContent = `Some selected ayath are not memorized yet. Missing in SABAQ history: Ayah(s) ${missingRanges} in ${spSurah}.`;
+      dpError.hidden = false;
+      return;
+    }
   }
-
-  const ayahMax = SURAH_AYAHS[surah] || 286;
-  if (startAyah < 1 || endAyah > ayahMax) {
-    updateError.textContent = `${surah} only has ${ayahMax} ayahs. Please enter a valid range within 1 and ${ayahMax}.`;
-    updateError.hidden = false;
-    return;
-  }
-
-  btnUpdateSubmit.disabled = true;
-  btnUpdateSubmit.textContent = 'Saving…';
-
-  try {
-    await putUpdateStudent(currentUpdateStudent.id, {
-      current_juz:   juz,
-      current_surah: surah,
-      current_ayah:  ayahStr,
-      update_date:   updateDate,
+  
+  records.push({
+    type: "SABAQ PARA",
+    juz: spNotRecited ? null : spJuz,
+    surah: spNotRecited ? null : spSurah,
+    start_ayah: spNotRecited ? null : spStart,
+    end_ayah: spNotRecited ? null : spEnd,
+    not_recited: spNotRecited
+  });
+  
+  // Parse Para(s)
+  const paraCards = paraEntriesContainer.querySelectorAll('.para-entry-card');
+  for (let card of paraCards) {
+    const pNotRecited = card.querySelector('.dp-para-not-recited').checked;
+    const pJuz = parseInt(card.querySelector('.dp-para-juz-sel').value, 10);
+    const pSurah = card.querySelector('.dp-para-surah-sel').value;
+    const pStart = parseInt(card.querySelector('.dp-para-start').value, 10);
+    const pEnd = parseInt(card.querySelector('.dp-para-end').value, 10);
+    
+    if (!pNotRecited && (!pStart || !pEnd)) {
+      dpError.textContent = "Please fill ayahs for all Para entries.";
+      dpError.hidden = false;
+      return;
+    }
+    records.push({
+      type: "PARA",
+      juz: pNotRecited ? null : pJuz,
+      surah: pNotRecited ? null : pSurah,
+      start_ayah: pNotRecited ? null : pStart,
+      end_ayah: pNotRecited ? null : pEnd,
+      not_recited: pNotRecited
     });
+  }
+  
+  const comment = dpCommentInput.value.trim();
+  const date = dpDateInput.value;
+  
+  if (!date) {
+    dpError.textContent = "Date is required.";
+    dpError.hidden = false;
+    return;
+  }
+  
+  const payload = {
+    date: date,
+    records: records,
+    comment: comment || null
+  };
+  
+  btnDpSubmit.disabled = true;
+  btnDpSubmit.textContent = 'Saving...';
+  
+  try {
+    // 1. Save daily progress first
+    await apiFetch(`/students/${currentUpdateStudent.id}/daily-progress`, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+    
+    // 2. ONLY IF valid SABAQ exists, automatically call existing PUT
+    if (!sabaqNotRecited) {
+      await putUpdateStudent(currentUpdateStudent.id, {
+        current_juz: sabaqJuz,
+        current_surah: sabaqSurah,
+        current_ayah: `${sabaqStart}-${sabaqEnd}`,
+        update_date: date
+      });
+    }
+    
     closeUpdateModal();
     await loadAndRender();
   } catch (err) {
-    updateError.textContent = err.message;
-    updateError.hidden = false;
-    btnUpdateSubmit.disabled = false;
-    btnUpdateSubmit.textContent = 'Save Update';
+    dpError.textContent = err.message;
+    dpError.hidden = false;
+    btnDpSubmit.disabled = false;
+    btnDpSubmit.textContent = 'Submit Daily Progress';
   }
 });
+
+
 
 btnDeleteStudent.addEventListener('click', async () => {
   if (!currentUpdateStudent) return;
@@ -365,6 +690,36 @@ function initDropdowns() {
     opt.textContent = yr;
     selCreateBatch.appendChild(opt);
   }
+  
+  // Starting Juz
+  for (let j = 1; j <= 30; j++) {
+    const opt = document.createElement('option');
+    opt.value = j;
+    opt.textContent = `Juz ${j}`;
+    selCreateStartJuz.appendChild(opt);
+  }
+  
+  // Phase G: Previous Juz Grid
+  for (let j = 1; j <= 30; j++) {
+    const btn = document.createElement('div');
+    btn.className = 'juz-btn';
+    btn.textContent = j;
+    btn.dataset.juz = j;
+    btn.addEventListener('click', () => {
+      btn.classList.toggle('selected');
+    });
+    createJuzGrid.appendChild(btn);
+  }
+  
+  createHasPreviousJuz.addEventListener('change', (e) => {
+    if (e.target.checked) {
+      createPreviousJuzSection.style.display = 'block';
+    } else {
+      createPreviousJuzSection.style.display = 'none';
+      // Clear selections if unchecked
+      createJuzGrid.querySelectorAll('.juz-btn.selected').forEach(b => b.classList.remove('selected'));
+    }
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -384,6 +739,26 @@ function formatDate(isoString) {
   } catch {
     return isoString;
   }
+}
+
+/** Formats an array of missing ayahs into compact ranges (e.g., [11,12,13,15] -> "11-13, 15") */
+function formatMissingRanges(missing) {
+  if (missing.length === 0) return "";
+  missing.sort((a,b) => a - b);
+  let ranges = [];
+  let start = missing[0];
+  let end = missing[0];
+  for (let i = 1; i < missing.length; i++) {
+    if (missing[i] === end + 1) {
+      end = missing[i];
+    } else {
+      ranges.push(start === end ? `${start}` : `${start}-${end}`);
+      start = missing[i];
+      end = missing[i];
+    }
+  }
+  ranges.push(start === end ? `${start}` : `${start}-${end}`);
+  return ranges.join(", ");
 }
 
 /** Build a <select> element pre-populated with Juz options. */
@@ -638,14 +1013,41 @@ function buildStudentCard(student) {
     openHistoryModal(student.full_name);
 
     try {
-      const history = await apiFetch(`/students/${student.id}/history`);
+      const [history, dailyProgress] = await Promise.all([
+        apiFetch(`/students/${student.id}/history`),
+        apiFetch(`/students/${student.id}/daily-progress`)
+      ]);
 
-      const count = history.length;
-      historyModalBadge.textContent = count === 0
-        ? 'No entries'
-        : `${count} ${count === 1 ? 'entry' : 'entries'}`;
+      const grouped = {};
+      
+      // Find all dates that have at least one Daily Progress record
+      const datesWithDailyProgress = new Set(dailyProgress.map(dp => dp.date));
 
-      if (count === 0) {
+      // Process legacy history
+      history.forEach(item => {
+        // Skip legacy update if we have a detailed daily progress for this date
+        if (datesWithDailyProgress.has(item.update_date)) return;
+        
+        if (!grouped[item.update_date]) grouped[item.update_date] = [];
+        grouped[item.update_date].push({
+          isLegacy: true,
+          ...item
+        });
+      });
+
+      // Process daily progress
+      dailyProgress.forEach(item => {
+        // Group by exact submission timestamp to show multiple submissions per day
+        const key = item.created_at;
+        if (!grouped[key]) grouped[key] = [];
+        grouped[key].push(item);
+      });
+
+      // Sort keys descending. (ISO timestamps and YYYY-MM-DD sort naturally)
+      const sortedKeys = Object.keys(grouped).sort((a,b) => b.localeCompare(a));
+      
+      if (sortedKeys.length === 0) {
+        historyModalBadge.textContent = 'No entries';
         historyModalBody.innerHTML = `
           <div class="history-empty">
             <div class="history-empty-icon">📋</div>
@@ -653,25 +1055,75 @@ function buildStudentCard(student) {
           </div>`;
         return;
       }
+      
+      historyModalBadge.textContent = `${sortedKeys.length} Entr${sortedKeys.length > 1 ? 'ies' : 'y'}`;
 
-      // Build timeline
-      const timelineHTML = history.map((h, i) => `
-        <div class="history-entry">
-          <div class="history-entry-dot"></div>
-          <div class="history-entry-content">
-            <div class="history-entry-date">
-              ${escapeHtml(h.update_date)}
-              ${i === 0 ? '<span class="latest-tag">Latest</span>' : ''}
-            </div>
-            <div class="history-entry-details">
-              <span class="history-entry-juz">Juz ${h.juz}</span>
-              <span class="history-entry-surah">${escapeHtml(h.surah)}</span>
-              <span class="history-entry-ayah">Ayah ${escapeHtml(h.ayah)}</span>
-            </div>
-          </div>
-        </div>
-      `).join('');
-
+      let timelineHTML = '';
+      
+      sortedKeys.forEach((key, index) => {
+         const records = grouped[key];
+         let dateContent = '';
+         
+         // Extract comment from the first record that has one
+         const groupComment = records.find(r => !r.isLegacy && r.comment)?.comment;
+         
+         records.forEach(r => {
+            if (r.isLegacy) {
+               dateContent += `
+                 <div class="tl-item legacy sabaq">
+                   <div class="tl-type-wrapper"><span class="tl-type">SABAQ</span> <span class="tl-badge badge-legacy" style="background: rgba(99, 102, 241, 0.15); color: #818cf8; font-size: 10px; padding: 2px 6px; border-radius: 4px; font-weight: 600; border: 1px solid rgba(99, 102, 241, 0.3);">Legacy</span></div>
+                   <div class="tl-detail">Juz ${r.juz}, ${escapeHtml(r.surah)} (${escapeHtml(r.ayah)})</div>
+                 </div>`;
+            } else {
+               let badge = r.not_recited ? '<span class="tl-badge badge-not-recited">Not Recited</span>' : '';
+               let detail = r.not_recited ? '' : (r.surah ? `Juz ${r.juz}, ${escapeHtml(r.surah)} (${r.start_ayah}-${r.end_ayah})` : `Juz ${r.juz}`);
+               let typeClass = r.type.replace(' ', '-').toLowerCase();
+               
+               dateContent += `
+                 <div class="tl-item ${typeClass} ${r.not_recited ? 'not-recited' : ''}">
+                   <div class="tl-type-wrapper"><span class="tl-type">${r.type}</span> ${badge}</div>
+                   ${detail ? `<div class="tl-detail">${detail}</div>` : ''}
+                 </div>`;
+            }
+         });
+         
+         // Append the comment as a distinct timeline item inside the card
+         if (groupComment) {
+             dateContent += `
+                 <div class="tl-item comment" style="margin-top: 4px;">
+                   <div class="tl-type">COMMENT</div>
+                   <div class="tl-detail">"${escapeHtml(groupComment)}"</div>
+                 </div>`;
+         }
+         
+         // Format the display date/time
+         let displayDate = '';
+         if (key.includes('T')) {
+             const d = new Date(key);
+             displayDate = d.toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' }) + 
+                           ', ' + d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+         } else {
+             displayDate = formatDate(key); // Legacy string
+         }
+         
+         if (dateContent) {
+           timelineHTML += `
+             <div class="history-entry">
+               <div class="history-entry-dot"></div>
+               <div class="history-entry-content">
+                 <div class="history-entry-date">
+                   ${displayDate}
+                   ${index === 0 ? '<span class="latest-tag">Latest</span>' : ''}
+                 </div>
+                 <div class="tl-card">
+                   ${dateContent}
+                 </div>
+               </div>
+             </div>
+           `;
+         }
+      });
+      
       historyModalBody.innerHTML = `<div class="history-timeline">${timelineHTML}</div>`;
 
     } catch (err) {
@@ -784,6 +1236,7 @@ formCreate.addEventListener('submit', async (e) => {
 
   const fullName  = document.getElementById('create-full-name').value.trim();
   const batchYear = parseInt(selCreateBatch.value, 10);
+  const startJuz  = parseInt(selCreateStartJuz.value, 10) || 1;
 
   // Basic client-side guard before hitting the API
   if (!fullName) {
@@ -798,17 +1251,26 @@ formCreate.addEventListener('submit', async (e) => {
     return;
   }
 
+  // Phase G: Gather previous juz
+  let previousJuz = [];
+  if (createHasPreviousJuz.checked) {
+    const selectedBtns = createJuzGrid.querySelectorAll('.juz-btn.selected');
+    selectedBtns.forEach(btn => previousJuz.push(parseInt(btn.dataset.juz, 10)));
+  }
+
   const submitBtn = formCreate.querySelector('[type="submit"]');
   submitBtn.disabled = true;
   submitBtn.textContent = 'Creating…';
 
   try {
+    const firstSurah = JUZ_SURAHS[startJuz][0];
     await postCreateStudent({
       full_name:     fullName,
       batch_year:    batchYear,
-      current_juz:   1,
-      current_surah: "Al-Fatihah",
+      current_juz:   startJuz,
+      current_surah: firstSurah,
       current_ayah:  "1-1",
+      previous_juz:  previousJuz,
     });
     closeCreateModal();
     // Re-fetch from backend — single source of truth

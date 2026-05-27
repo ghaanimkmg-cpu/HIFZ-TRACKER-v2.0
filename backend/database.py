@@ -36,6 +36,7 @@ def initialize_database() -> None:
             current_juz  INTEGER NOT NULL CHECK(current_juz BETWEEN 1 AND 30),
             current_surah TEXT   NOT NULL,
             current_ayah TEXT    NOT NULL,
+            previous_juz TEXT    DEFAULT '',
             last_updated TEXT    NOT NULL,
             created_at   TEXT    NOT NULL
         )
@@ -50,6 +51,24 @@ def initialize_database() -> None:
             surah        TEXT    NOT NULL,
             ayah         TEXT    NOT NULL,
             update_date  TEXT    NOT NULL,
+            created_at   TEXT    NOT NULL,
+            FOREIGN KEY(student_id) REFERENCES students(id) ON DELETE CASCADE
+        )
+        """
+    )
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS daily_progress_records (
+            id           INTEGER PRIMARY KEY AUTOINCREMENT,
+            student_id   INTEGER NOT NULL,
+            date         TEXT    NOT NULL,
+            type         TEXT    NOT NULL,
+            juz          INTEGER,
+            surah        TEXT,
+            start_ayah   INTEGER,
+            end_ayah     INTEGER,
+            comment      TEXT,
+            not_recited  INTEGER DEFAULT 0,
             created_at   TEXT    NOT NULL,
             FOREIGN KEY(student_id) REFERENCES students(id) ON DELETE CASCADE
         )
