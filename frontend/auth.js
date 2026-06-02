@@ -17,8 +17,8 @@ async function handleLogin(event) {
     event.preventDefault();
     const btn = document.getElementById('login-btn');
     const form = event.target;
-    const username = form.username.value.trim();
-    const password = form.password.value;
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
     
     if (!username || !password) {
         showError("Username and password are required.");
@@ -59,8 +59,8 @@ async function handleSignup(event) {
     event.preventDefault();
     const btn = document.getElementById('signup-btn');
     const form = event.target;
-    const username = form.username.value.trim();
-    const password = form.password.value;
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
     
     if (!username || !password) {
         showError("Username and password are required.");
@@ -148,14 +148,27 @@ window.addEventListener('pageshow', (event) => {
 // Attach event listeners
 document.addEventListener('DOMContentLoaded', () => {
     clearForms();
-    setTimeout(clearForms, 100); // Defeat delayed browser autofill
+    
+    // Simple aggressive clearing for Chrome's delayed autofill
+    const pwd = document.getElementById('password');
+    const usr = document.getElementById('username');
+    if (pwd) {
+        setTimeout(() => { pwd.value = ''; if (usr) usr.value = ''; }, 50);
+        setTimeout(() => { pwd.value = ''; if (usr) usr.value = ''; }, 250);
+        setTimeout(() => { pwd.value = ''; if (usr) usr.value = ''; }, 600);
+    }
+    
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     
     const signupForm = document.getElementById('signup-form');
     if (signupForm) signupForm.addEventListener('submit', handleSignup);
     
-    // (continue-tracker-btn removed)
+    const forgotForm = document.getElementById('forgot-password-form');
+    if (forgotForm) forgotForm.addEventListener('submit', handleForgotPassword);
+    
+    const resetForm = document.getElementById('reset-password-form');
+    if (resetForm) resetForm.addEventListener('submit', handleResetPassword);
     
     // Show success message if redirected from signup
     const urlParams = new URLSearchParams(window.location.search);
@@ -170,3 +183,90 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 });
+
+// Function to handle forgot password form submission
+async function handleForgotPassword(event) {
+    event.preventDefault();
+    const btn = document.getElementById('forgot-btn');
+    const form = event.target;
+    const username = document.getElementById('username').value.trim();
+    
+    if (!username) {
+        showError("Username is required.");
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = 'Requesting...';
+    hideError();
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            form.reset();
+            const successDiv = document.getElementById('success-msg');
+            if (successDiv) {
+                // Show prototype token on screen
+                successDiv.innerHTML = `${data.message}<br><br><b>PROTOTYPE TOKEN:</b><br>${data.reset_token || 'None'}<br><br><a href="reset-password.html" style="color:var(--auth-gold)">Proceed to Reset Password</a>`;
+                successDiv.style.display = 'block';
+            }
+            btn.textContent = 'Token Generated';
+        } else {
+            showError(data.detail || "Request failed");
+            btn.disabled = false;
+            btn.textContent = 'Request Reset Token';
+        }
+    } catch (err) {
+        showError("Could not connect to server.");
+        btn.disabled = false;
+        btn.textContent = 'Request Reset Token';
+    }
+}
+
+// Function to handle reset password form submission
+async function handleResetPassword(event) {
+    event.preventDefault();
+    const btn = document.getElementById('reset-btn');
+    const form = event.target;
+    const token = document.getElementById('token').value.trim();
+    const new_password = document.getElementById('new_password').value;
+    
+    if (!token || !new_password) {
+        showError("Token and new password are required.");
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = 'Resetting...';
+    hideError();
+    
+    try {
+        const response = await fetch(`${API_BASE}/auth/reset-password`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ token, new_password })
+        });
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+            form.reset();
+            window.location.href = 'login.html';
+        } else {
+            showError(data.detail || "Reset failed");
+            btn.disabled = false;
+            btn.textContent = 'Reset Password';
+        }
+    } catch (err) {
+        showError("Could not connect to server.");
+        btn.disabled = false;
+        btn.textContent = 'Reset Password';
+    }
+}

@@ -61,6 +61,10 @@ from schemas import (
     RegisterResponse,
     LoginRequest,
     LoginResponse,
+    ForgotPasswordRequest,
+    ForgotPasswordResponse,
+    ResetPasswordRequest,
+    ResetPasswordResponse,
 )
 from auth import (
     create_user,
@@ -70,6 +74,8 @@ from auth import (
     verify_password,
     get_user_by_username,
     require_auth,
+    create_password_reset_token,
+    reset_user_password,
 )
 from constants import SURAH_AYAHS, JUZ_SURAHS, SURAH_ORDER
 
@@ -450,5 +456,45 @@ def logout(request: Request, response: Response) -> dict:
         httponly=True,
         samesite="lax",
     )
+    return {"message": "Logged out successfully."}
+
+
+# -----------------------------------------------------------------------------
+# POST-FINAL ENHANCEMENT: FORGOT PASSWORD ENDPOINTS
+# -----------------------------------------------------------------------------
+
+@app.post("/auth/forgot-password", response_model=ForgotPasswordResponse)
+def forgot_password(req: ForgotPasswordRequest):
+    """
+    Initiates a password reset flow.
+    Generates a secure token if the username exists.
+    Returns a generic message to prevent username enumeration,
+    but includes the token in the prototype for easy testing.
+    """
+    from auth import create_password_reset_token
+    token = create_password_reset_token(req.username)
     
-    return {"status": "ok", "message": "Logged out successfully"}
+    # In a real app, we would send an email here and NOT return the token.
+    # For this prototype, we return it so the UI can display it for testing.
+    return ForgotPasswordResponse(
+        message="If an account exists for that username, a reset link has been generated.",
+        reset_token=token
+    )
+
+@app.post("/auth/reset-password", response_model=ResetPasswordResponse)
+def reset_password(req: ResetPasswordRequest):
+    """
+    Resets the password using a valid, unused token.
+    """
+    from auth import reset_user_password
+    # reset_user_password validates the token and raises 400 if invalid
+    reset_user_password(req.token, req.new_password)
+    
+    return ResetPasswordResponse(
+        message="Password has been successfully reset. You can now log in."
+    )
+
+
+# -----------------------------------------------------------------------------
+# PROTECTED TRACKER API ROUTES (Phase 4: require_auth guard added)
+# -----------------------------------------------------------------------------

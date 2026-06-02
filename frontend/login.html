@@ -33,7 +33,10 @@
         
         <div class="form-group">
           <label class="form-label" for="password">Password</label>
-          <input type="password" id="password" name="password" class="form-input" autocomplete="current-password" required>
+          <input type="text" id="password" name="password" class="form-input" autocomplete="off" onfocus="this.type='password'" required>
+          <div style="text-align: right; margin-top: 4px;">
+            <a href="forgot-password.html" style="color: var(--auth-gold); font-size: 13px; text-decoration: none; font-weight: 600;">Forgot password?</a>
+          </div>
         </div>
         
         <button type="submit" id="login-btn" class="btn-submit">Login</button>

@@ -354,3 +354,84 @@ def require_auth(request: Request) -> int:
         )
     return user_id
 
+
+# ---------------------------------------------------------------------------
+# POST-FINAL ENHANCEMENT: FORGOT PASSWORD HELPERS
+# ---------------------------------------------------------------------------
+
+def create_password_reset_token(username: str) -> str | None:
+    """
+    Generate a secure, single-use token for a given username.
+    Returns the raw token (to be sent via email/SMS, or displayed in prototype).
+    Returns None if the user does not exist.
+    Token expires in 15 minutes.
+    """
+    user = get_user_by_username(username)
+    if not user:
+        return None
+        
+    token: str = secrets.token_hex(32)
+    
+    # 15 minute expiry
+    expires_at = datetime.now(timezone.utc).timestamp() + (15 * 60)
+    
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO password_reset_tokens (user_id, token, expires_at, used, created_at)
+        VALUES (?, ?, ?, 0, ?)
+        """,
+        (user["id"], token, expires_at, datetime.now(timezone.utc).isoformat())
+    )
+    conn.commit()
+    conn.close()
+    
+    return token
+
+def reset_user_password(token: str, new_password: str) -> bool:
+    """
+    Validates the token, ensures it's unused and not expired,
+    and resets the user's password using a new salt.
+    Returns True if successful, raises HTTPException if invalid.
+    """
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT id, user_id, expires_at, used FROM password_reset_tokens WHERE token = ?",
+        (token,)
+    )
+    row = cursor.fetchone()
+    
+    if not row:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
+        
+    if row["used"] == 1:
+        conn.close()
+        raise HTTPException(status_code=400, detail="Reset token has already been used.")
+        
+    if float(row["expires_at"]) < datetime.now(timezone.utc).timestamp():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Reset token has expired.")
+        
+    user_id = row["user_id"]
+    token_id = row["id"]
+    
+    # Generate new salt and hash for the new password
+    salt, hashed = hash_password(new_password)
+    
+    # Update password and invalidate token
+    cursor.execute(
+        "UPDATE users SET salt = ?, hashed_password = ? WHERE id = ?",
+        (salt, hashed, user_id)
+    )
+    cursor.execute(
+        "UPDATE password_reset_tokens SET used = 1 WHERE id = ?",
+        (token_id,)
+    )
+    conn.commit()
+    conn.close()
+    
+    return True

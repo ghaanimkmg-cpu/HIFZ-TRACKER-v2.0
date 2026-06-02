@@ -80,9 +80,38 @@ def initialize_database() -> None:
         )
         """
     )
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id TEXT PRIMARY KEY,
+            user_id    INTEGER NOT NULL,
+            expires_at TEXT    NOT NULL,
+            created_at TEXT    NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
 
     # -------------------------------------------------------------------------
-    # PHASE 1 AUTH EXTENSION — users table
+    # POST-FINAL ENHANCEMENT — password_reset_tokens table
+    # -------------------------------------------------------------------------
+    # Stores single-use tokens for password resets.
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id    INTEGER NOT NULL,
+            token      TEXT    NOT NULL UNIQUE,
+            expires_at TEXT    NOT NULL,
+            used       INTEGER DEFAULT 0,
+            created_at TEXT    NOT NULL,
+            FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+        )
+        """
+    )
+
+    # -------------------------------------------------------------------------
+    # Safe Migrations (Phase 1)
     # -------------------------------------------------------------------------
     # Stores coordinator accounts. username is UNIQUE — no duplicate logins.
     # salt is generated per-user with Python `secrets` (added in Phase 2).

@@ -17,7 +17,8 @@ PHASE 2 AUTH EXTENSION (2026-06-02):
 """
 
 import re
-from typing import Any
+from datetime import date
+from typing import Any, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -324,3 +325,20 @@ class LoginResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# -----------------------------------------------------------------------------
+# POST-FINAL ENHANCEMENT: FORGOT PASSWORD SCHEMAS
+# -----------------------------------------------------------------------------
+
+class ForgotPasswordRequest(BaseModel):
+    username: str = Field(..., description="Username to request password reset for")
+
+class ForgotPasswordResponse(BaseModel):
+    message: str = Field(..., description="Status message")
+    reset_token: Optional[str] = Field(None, description="The reset token (only included for prototype testing)")
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., description="The single-use reset token")
+    new_password: str = Field(..., description="The new password")
+
+class ResetPasswordResponse(BaseModel):
+    message: str = Field(..., description="Status message")
