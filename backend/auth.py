@@ -4,6 +4,7 @@ Authentication helpers: password hashing, user account CRUD, session management.
 
 PHASE 2 — PASSWORD HASHING + REGISTER BACKEND
 PHASE 3 — LOGIN BACKEND + SESSION TOKENS (2026-06-02)
+PHASE 4 — PROTECT TRACKER ROUTES (2026-06-02)
 
 Rules enforced here:
   - NEVER store or log plain-text passwords.
@@ -20,6 +21,7 @@ Responsibilities:
   - create_session()       — generate a secure token and store user_id in memory.
   - get_session_user_id()  — resolve a token back to a user_id (or None).
   - delete_session()       — remove a token from memory on logout.
+  - require_auth()         — read cookie, validate session, return user_id or raise 401.
 
 Session store design (per spec):
     sessions: dict[str, int] = {
@@ -39,6 +41,8 @@ import hashlib
 import secrets
 from datetime import datetime, timezone
 from typing import Any
+
+from fastapi import HTTPException, Request, status
 
 from database import get_connection
 
@@ -294,4 +298,59 @@ def delete_session(token: str) -> None:
     Safe to call even if the token does not exist (pop with default None).
     """
     sessions.pop(token, None)
+
+
+# ---------------------------------------------------------------------------
+# PHASE 4 — Session validation guard (used by all protected routes)
+# ---------------------------------------------------------------------------
+
+def require_auth(request: Request) -> int:
+    """
+    Read and validate the session cookie from an incoming FastAPI Request.
+
+    How it works:
+        1. Read the 'session_token' value from request.cookies.
+           The browser automatically includes this cookie on every request
+           after a successful login (because it was set with httponly=True).
+        2. If the cookie is absent (empty string or not present at all),
+           raise 401 Unauthorized immediately — no session, no access.
+        3. Call get_session_user_id(token) to look up the token in the
+           in-memory sessions dict.
+           - If found: return the associated user_id to the calling route.
+           - If not found (server restarted, token tampered, expired):
+             raise 401 Unauthorized.
+
+    Why a helper instead of repeating this logic in every route?
+        Single responsibility: the session check lives in one place.
+        If the logic ever changes (e.g. adding expiry times in a future
+        phase), only this function needs to be updated.
+
+    Design note for Phase 6:
+        This function returns user_id so that every protected route
+        automatically knows WHO is making the request. Phase 6 will use
+        that user_id to filter students by ownership. The return value
+        is already wired in — Phase 6 just needs to use it.
+
+    Args:
+        request: The FastAPI Request object passed into each route handler.
+
+    Returns:
+        int — the user_id of the authenticated coordinator.
+
+    Raises:
+        HTTPException(401) — if no valid session cookie is present.
+    """
+    token: str = request.cookies.get("session_token", "")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required. Please log in.",
+        )
+    user_id = get_session_user_id(token)
+    if user_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid. Please log in again.",
+        )
+    return user_id
 

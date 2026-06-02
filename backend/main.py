@@ -24,13 +24,18 @@ PHASE 3 AUTH EXTENSION (2026-06-02):
   - Added import of create_session, get_session_user_id, delete_session from auth.py.
   - Added import of LoginRequest, LoginResponse from schemas.py.
   - Added POST /auth/login route.
+
+PHASE 4 AUTH EXTENSION (2026-06-02):
+  - Added import of require_auth from auth.py.
+  - Added request: Request param + require_auth(request) call to all 7 tracker routes.
+  - Public routes unchanged: GET /, POST /auth/register, POST /auth/login.
 """
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, Request, Response, status
+from fastapi import FastAPI, HTTPException, Request, Response, status, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import initialize_database
@@ -64,6 +69,7 @@ from auth import (
     delete_session,
     verify_password,
     get_user_by_username,
+    require_auth,
 )
 from constants import SURAH_AYAHS, JUZ_SURAHS, SURAH_ORDER
 
@@ -98,11 +104,13 @@ def health_check() -> dict[str, str]:
     return {"status": "ok", "app": "HIFZ TRACKER 2.0", "version": "2.0.0"}
 
 @app.get("/students", response_model=list[StudentResponse], tags=["Students"])
-def list_students() -> list[dict[str, Any]]:
+def list_students(user_id: int = Depends(require_auth)) -> list[dict[str, Any]]:
     """
     GET /students
     Return all students ordered by batch_year ASC, full_name ASC.
     Used by the frontend to populate batch-year columns.
+    PROTECTED: valid session cookie required (Phase 4).
+    Phase 6 will filter by user_id to return only the logged-in user's students.
     """
     return get_all_students()
 
@@ -112,12 +120,14 @@ def list_students() -> list[dict[str, Any]]:
     status_code=201,
     tags=["Students"],
 )
-def add_student(payload: StudentCreate) -> dict[str, Any]:
+def add_student(payload: StudentCreate, user_id: int = Depends(require_auth)) -> dict[str, Any]:
     """
     POST /students
     Create a new student.
     Pydantic validates the body; models.py writes to SQLite.
     Returns the newly created student record.
+    PROTECTED: valid session cookie required (Phase 4).
+    Phase 6 will attach user_id automatically when inserting.
     """
     student = create_student(
         full_name=payload.full_name,
@@ -134,12 +144,14 @@ def add_student(payload: StudentCreate) -> dict[str, Any]:
     response_model=StudentResponse,
     tags=["Students"],
 )
-def update_student(student_id: int, payload: StudentUpdate) -> dict[str, Any]:
+def update_student(student_id: int, payload: StudentUpdate, user_id: int = Depends(require_auth)) -> dict[str, Any]:
     """
     PUT /students/{student_id}
     Update Juz / Surah / Ayah for an existing student.
     Returns the updated student record.
     Raises 404 if the student id is not found.
+    PROTECTED: valid session cookie required (Phase 4).
+    Phase 6 will verify the student belongs to the logged-in user.
     """
     updated = update_student_progress(
         student_id=student_id,
@@ -160,10 +172,11 @@ def update_student(student_id: int, payload: StudentUpdate) -> dict[str, Any]:
     response_model=list[HistoryResponse],
     tags=["Students"],
 )
-def get_history(student_id: int) -> list[dict[str, Any]]:
+def get_history(student_id: int, user_id: int = Depends(require_auth)) -> list[dict[str, Any]]:
     """
     GET /students/{student_id}/history
     Return the update history for a specific student.
+    PROTECTED: valid session cookie required (Phase 4).
     """
     return get_student_history(student_id)
 
@@ -172,12 +185,14 @@ def get_history(student_id: int) -> list[dict[str, Any]]:
     status_code=204,
     tags=["Students"],
 )
-def remove_student(student_id: int) -> None:
+def remove_student(student_id: int, user_id: int = Depends(require_auth)) -> None:
     """
     DELETE /students/{student_id}
     Permanently delete a student from the database.
     Returns 204 No Content on success.
     Raises 404 if the student id is not found.
+    PROTECTED: valid session cookie required (Phase 4).
+    Phase 6 will verify the student belongs to the logged-in user.
     """
     deleted = delete_student(student_id)
     if not deleted:
@@ -192,10 +207,11 @@ def remove_student(student_id: int) -> None:
     response_model=list[DailyProgressRecordResponse],
     tags=["Students"],
 )
-def get_daily_progress(student_id: int) -> list[dict[str, Any]]:
+def get_daily_progress(student_id: int, user_id: int = Depends(require_auth)) -> list[dict[str, Any]]:
     """
     GET /students/{student_id}/daily-progress
-    Return all comprehensive daily progress records (Sabaq, Sabaq Para, Para, Comments) for a student.
+    Return all comprehensive daily progress records for a student.
+    PROTECTED: valid session cookie required (Phase 4).
     """
     student = get_student_by_id(student_id)
     if not student:
@@ -207,10 +223,11 @@ def get_daily_progress(student_id: int) -> list[dict[str, Any]]:
     status_code=201,
     tags=["Daily Progress"],
 )
-def add_daily_progress(student_id: int, payload: DailyProgressCreate) -> dict[str, Any]:
+def add_daily_progress(student_id: int, payload: DailyProgressCreate, user_id: int = Depends(require_auth)) -> dict[str, Any]:
     """
     POST /students/{student_id}/daily-progress
     Submit a daily progress update (SABAQ, SABAQ PARA, PARA).
+    PROTECTED: valid session cookie required (Phase 4).
     """
     student = get_student_by_id(student_id)
     if not student:
