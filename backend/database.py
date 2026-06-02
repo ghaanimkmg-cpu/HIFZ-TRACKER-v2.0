@@ -4,6 +4,11 @@ SQLite connection and table initialization.
 
 This module is the ONLY place that touches the database connection.
 It is imported by main.py and models.py — never by the frontend.
+
+PHASE 1 AUTH EXTENSION (2026-06-02):
+  - Added `users` table for coordinator account storage.
+  - Added `user_id` column to `students` table (safe migration — never drops
+    existing data; existing rows receive NULL for user_id).
 """
 
 import sqlite3
@@ -22,7 +27,8 @@ def get_connection() -> sqlite3.Connection:
 
 def initialize_database() -> None:
     """
-    Create the students table if it does not already exist.
+    Create all required tables if they do not already exist, and apply
+    any safe column migrations needed for the current version.
     Called once at application startup from main.py lifespan.
     """
     conn = get_connection()
@@ -74,5 +80,44 @@ def initialize_database() -> None:
         )
         """
     )
+
+    # -------------------------------------------------------------------------
+    # PHASE 1 AUTH EXTENSION — users table
+    # -------------------------------------------------------------------------
+    # Stores coordinator accounts. username is UNIQUE — no duplicate logins.
+    # salt is generated per-user with Python `secrets` (added in Phase 2).
+    # hashed_password stores only the salted SHA-256 hash — never plain text.
+    # created_at is a UTC ISO-8601 timestamp.
+    cursor.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            username        TEXT    NOT NULL UNIQUE,
+            salt            TEXT    NOT NULL,
+            hashed_password TEXT    NOT NULL,
+            created_at      TEXT    NOT NULL
+        )
+        """
+    )
+
+    # -------------------------------------------------------------------------
+    # PHASE 1 AUTH EXTENSION — add user_id to students (safe migration)
+    # -------------------------------------------------------------------------
+    # SQLite does not support "ADD COLUMN IF NOT EXISTS", so we inspect
+    # PRAGMA table_info first and only run ALTER TABLE when the column is
+    # genuinely absent. This means:
+    #   - Existing student rows are kept intact (user_id = NULL for old rows).
+    #   - Running initialize_database() again on server restart is fully safe.
+    #   - Zero data is dropped or corrupted.
+    cursor.execute("PRAGMA table_info(students)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if "user_id" not in existing_columns:
+        cursor.execute(
+            """
+            ALTER TABLE students
+            ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE SET NULL
+            """
+        )
+
     conn.commit()
     conn.close()
