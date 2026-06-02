@@ -147,6 +147,13 @@ def create_user(username: str, plain_password: str) -> dict[str, Any]:
     The plain password is passed in but immediately discarded after hashing.
     It is NEVER written to the database, logged, or returned.
     """
+    clean_username = username.strip()
+    
+    # Check for existing user (case-insensitive)
+    existing = get_user_by_username(clean_username)
+    if existing:
+        raise ValueError(f"Username '{clean_username}' is already taken.")
+        
     salt, hashed_password = hash_password(plain_password)
     now_iso = datetime.now(timezone.utc).isoformat()
 
@@ -158,7 +165,7 @@ def create_user(username: str, plain_password: str) -> dict[str, Any]:
             INSERT INTO users (username, salt, hashed_password, created_at)
             VALUES (?, ?, ?, ?)
             """,
-            (username.strip(), salt, hashed_password, now_iso),
+            (clean_username, salt, hashed_password, now_iso),
         )
         conn.commit()
         new_id = cursor.lastrowid
@@ -199,7 +206,7 @@ def get_user_by_username(username: str) -> dict[str, Any] | None:
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM users WHERE username = ?",
+        "SELECT * FROM users WHERE LOWER(username) = LOWER(?)",
         (username.strip(),),
     )
     row = cursor.fetchone()
