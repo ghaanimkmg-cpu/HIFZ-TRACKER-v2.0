@@ -18,13 +18,19 @@ PHASE 2 AUTH EXTENSION (2026-06-02):
   - Added import of create_user from auth.py.
   - Added import of RegisterRequest, RegisterResponse from schemas.py.
   - Added POST /auth/register route.
+
+PHASE 3 AUTH EXTENSION (2026-06-02):
+  - Added Response import from fastapi (needed to set cookies).
+  - Added import of create_session, get_session_user_id, delete_session from auth.py.
+  - Added import of LoginRequest, LoginResponse from schemas.py.
+  - Added POST /auth/login route.
 """
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, status
+from fastapi import FastAPI, HTTPException, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import initialize_database
@@ -48,8 +54,17 @@ from schemas import (
     DailyProgressRecordResponse,
     RegisterRequest,
     RegisterResponse,
+    LoginRequest,
+    LoginResponse,
 )
-from auth import create_user
+from auth import (
+    create_user,
+    create_session,
+    get_session_user_id,
+    delete_session,
+    verify_password,
+    get_user_by_username,
+)
 from constants import SURAH_AYAHS, JUZ_SURAHS, SURAH_ORDER
 
 @asynccontextmanager
@@ -303,4 +318,94 @@ def register(payload: RegisterRequest) -> dict:
         "id": user["id"],
         "username": user["username"],
         "created_at": user["created_at"],
+    }
+
+
+# =============================================================================
+# PHASE 3 AUTH — Login endpoint
+# =============================================================================
+
+@app.post(
+    "/auth/login",
+    response_model=LoginResponse,
+    status_code=status.HTTP_200_OK,
+    tags=["Auth"],
+)
+def login(payload: LoginRequest, response: Response) -> dict:
+    """
+    POST /auth/login
+    Verify coordinator credentials and issue a session cookie.
+
+    Flow:
+        1. Pydantic validates the request body via LoginRequest.
+        2. Look up the user row by username (get_user_by_username).
+           If not found -> 401 Unauthorized.
+        3. Re-hash the submitted password with the stored salt using
+           verify_password() which calls secrets.compare_digest() internally.
+           If hashes do not match -> 401 Unauthorized.
+        4. Generate a 64-char hex session token with secrets.token_hex(32)
+           via create_session() and store it in the in-memory sessions dict:
+               sessions[token] = user_id
+        5. Send the token to the browser as an HTTP-only cookie named
+           'session_token'. The browser will automatically attach this
+           cookie to every future request to this API.
+        6. Return LoginResponse (id + username only).
+
+    Cookie flags:
+        httponly=True  — JavaScript cannot read the cookie value.
+                         This prevents session theft via XSS attacks.
+        samesite='lax' — The cookie is sent on same-site requests and
+                         top-level navigations, balancing security and usability.
+
+    Security notes:
+        - Salt and hashed_password are fetched from the DB internally but
+          are NEVER returned in the API response.
+        - The session token is in the cookie only — not in the response body.
+        - A generic 'Invalid credentials' message is used for both wrong
+          username and wrong password to prevent username enumeration.
+
+    Errors:
+        401 Unauthorized — username not found OR password incorrect.
+        422 Unprocessable Entity — blank username or password.
+    """
+    # Step 1 — look up the user (full row including salt + hash for verification)
+    user = get_user_by_username(payload.username)
+    if user is None:
+        # Username does not exist.
+        # Deliberately use the same error message as wrong-password so that
+        # an attacker cannot tell which usernames are registered.
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials.",
+        )
+
+    # Step 2 — verify password using the stored salt + hash
+    password_ok = verify_password(
+        plain_password=payload.password,
+        stored_salt=user["salt"],
+        stored_hash=user["hashed_password"],
+    )
+    if not password_ok:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials.",
+        )
+
+    # Step 3 — create a session token and store it in memory
+    token = create_session(user_id=user["id"])
+
+    # Step 4 — send the token as an HTTP-only cookie
+    # httponly=True means JavaScript (and XSS scripts) cannot read this value.
+    response.set_cookie(
+        key="session_token",
+        value=token,
+        httponly=True,
+        samesite="lax",
+        # secure=True would enforce HTTPS — left False for local development
+    )
+
+    # Step 5 — return only safe, non-sensitive identity information
+    return {
+        "id": user["id"],
+        "username": user["username"],
     }

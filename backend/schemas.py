@@ -263,3 +263,64 @@ class RegisterResponse(BaseModel):
 
     model_config = {"from_attributes": True}
 
+
+# ---------------------------------------------------------------------------
+# PHASE 3 AUTH — Login schemas
+# ---------------------------------------------------------------------------
+
+class LoginRequest(BaseModel):
+    """
+    Schema for POST /auth/login request body.
+
+    Accepts username and password for verification.
+    The password is used only to re-hash and compare against the stored hash.
+    It is NEVER stored, logged, echoed, or returned.
+    """
+
+    username: str = Field(
+        ...,
+        min_length=1,
+        max_length=40,
+        description="Coordinator username.",
+    )
+    password: str = Field(
+        ...,
+        min_length=1,
+        description="Account password.",
+    )
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def username_must_not_be_blank(cls, v: Any) -> str:
+        s = str(v).strip()
+        if not s:
+            raise ValueError("Username cannot be blank.")
+        return s
+
+    @field_validator("password", mode="before")
+    @classmethod
+    def password_must_not_be_blank(cls, v: Any) -> str:
+        s = str(v)
+        if not s.strip():
+            raise ValueError("Password cannot be blank.")
+        return s
+
+
+class LoginResponse(BaseModel):
+    """
+    Safe response returned after a successful login.
+
+    IMPORTANT: The session token is NOT in this response body.
+    It is sent exclusively as an HTTP-only cookie by the login route.
+    This schema returns only the non-sensitive user identity fields so the
+    frontend knows which account is now active.
+
+    Fields intentionally excluded: salt, hashed_password, session token.
+    """
+
+    id: int
+    username: str
+
+    model_config = {"from_attributes": True}
+
+

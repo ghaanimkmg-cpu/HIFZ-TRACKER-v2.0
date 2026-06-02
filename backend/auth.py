@@ -1,20 +1,34 @@
 """
 auth.py — HIFZ TRACKER 2.0
-Authentication helpers: password hashing and user account CRUD.
+Authentication helpers: password hashing, user account CRUD, session management.
 
 PHASE 2 — PASSWORD HASHING + REGISTER BACKEND
+PHASE 3 — LOGIN BACKEND + SESSION TOKENS (2026-06-02)
 
 Rules enforced here:
   - NEVER store or log plain-text passwords.
   - Every password gets its own unique salt (generated with `secrets`).
   - Hashing is done with Python built-in `hashlib` (SHA-256).
+  - Session tokens are generated with `secrets.token_hex()` — never `random`.
   - No external authentication libraries (no bcrypt, passlib, JWT, OAuth).
 
 Responsibilities:
-  - hash_password()     — generate salt + hash for a new password.
-  - verify_password()   — re-hash a candidate password and compare.
-  - create_user()       — insert a new user row into the `users` table.
+  - hash_password()        — generate salt + hash for a new password.
+  - verify_password()      — re-hash a candidate password and compare safely.
+  - create_user()          — insert a new user row into the `users` table.
   - get_user_by_username() — look up a user row by username.
+  - create_session()       — generate a secure token and store user_id in memory.
+  - get_session_user_id()  — resolve a token back to a user_id (or None).
+  - delete_session()       — remove a token from memory on logout.
+
+Session store design (per spec):
+    sessions: dict[str, int] = {
+        "token_hex_string": user_id,
+        ...
+    }
+  - Stored in this module's global namespace (server memory only).
+  - Sessions do NOT survive a server restart — this is intentional.
+  - No database table is used for sessions.
 
 This module MUST NOT contain FastAPI routing logic.
 This module MUST NOT contain Pydantic schemas.
@@ -189,3 +203,95 @@ def get_user_by_username(username: str) -> dict[str, Any] | None:
     if row is None:
         return None
     return dict(row)
+
+
+# ---------------------------------------------------------------------------
+# PHASE 3 — In-memory session store
+# ---------------------------------------------------------------------------
+#
+# sessions maps a session token (hex string) to the integer user_id of the
+# logged-in coordinator.
+#
+# Example after two users log in:
+#   sessions = {
+#       "a3f9bc...": 1,   # token for user id 1
+#       "d72e01...": 2,   # token for user id 2
+#   }
+#
+# Why module-level?
+#   Python module state is process-global. The FastAPI server process loads
+#   this module once and keeps it in memory. All requests share the same
+#   `sessions` dict for the lifetime of the server process.
+#
+# Why not a database table?
+#   The spec explicitly requires in-memory sessions. This means:
+#     - Sessions are fast to read/write (no disk I/O).
+#     - Sessions are automatically cleared when the server restarts.
+#     - This is intentional and acceptable for this task.
+#
+# Session token format:
+#   64 hex characters produced by secrets.token_hex(32).
+#   Cryptographically random — cannot be guessed or predicted.
+
+sessions: dict[str, int] = {}
+
+
+def create_session(user_id: int) -> str:
+    """
+    Generate a secure session token and store it in the in-memory sessions dict.
+
+    Flow:
+        successful login
+            |
+        secrets.token_hex(32)  — generates 64 random hex chars
+            |
+        sessions[token] = user_id  — store in memory
+            |
+        return token  — caller will set this as an HTTP-only cookie
+
+    Why secrets.token_hex() and NOT random?
+        Python's `random` module uses a predictable pseudo-random algorithm.
+        An attacker who knows a few tokens can potentially predict the next
+        one. `secrets` uses the OS cryptographic random source (e.g.,
+        /dev/urandom on Linux, CryptGenRandom on Windows), which is
+        impossible to predict. Session tokens MUST be unpredictable.
+
+    Returns:
+        The session token string (64 hex characters).
+        The caller is responsible for sending it as an HTTP-only cookie.
+    """
+    token: str = secrets.token_hex(32)
+    sessions[token] = user_id
+    return token
+
+
+def get_session_user_id(token: str) -> int | None:
+    """
+    Resolve a session token to the user_id it belongs to.
+
+    Called by every protected route (Phase 4) to verify the request
+    carries a valid session cookie.
+
+    Returns:
+        int  — the user_id if the token exists in the sessions dict.
+        None — if the token is missing, expired (server restart), or invalid.
+
+    Why sessions.get() and not sessions[token]?
+        sessions[token] would raise a KeyError for invalid tokens.
+        sessions.get(token) returns None safely — the calling route then
+        returns 401 Unauthorized without crashing.
+    """
+    return sessions.get(token)
+
+
+def delete_session(token: str) -> None:
+    """
+    Remove a session token from memory (used by the logout endpoint in Phase 7).
+
+    After this call, any future request with the same token will receive
+    None from get_session_user_id() and be treated as unauthenticated.
+
+    Safe to call even if the token does not exist (pop with default None).
+    """
+    sessions.pop(token, None)
+
