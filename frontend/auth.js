@@ -1,21 +1,16 @@
 const API_BASE = window.location.protocol + '//' + window.location.hostname + ':8081';
 
-// Function to check if user is already logged in (used by "Continue to tracker")
-async function checkSessionAndRedirect() {
+// Automatically clear session on load
+(async function autoLogout() {
     try {
-        const response = await fetch(`${API_BASE}/students`, {
-            method: 'GET',
+        await fetch(`${API_BASE}/auth/logout`, {
+            method: 'POST',
             credentials: 'include'
         });
-        if (response.ok) {
-            window.location.href = 'index.html?v=4';
-        } else {
-            showError("No active session found. Please log in.");
-        }
-    } catch (err) {
-        showError("Could not connect to server.");
+    } catch (e) {
+        // Ignore errors
     }
-}
+})();
 
 // Function to handle login form submission
 async function handleLogin(event) {
@@ -45,6 +40,7 @@ async function handleLogin(event) {
         const data = await response.json();
         
         if (response.ok) {
+            form.reset();
             window.location.href = 'index.html?v=4';
         } else {
             showError(data.detail || "Login failed");
@@ -86,6 +82,7 @@ async function handleSignup(event) {
         
         if (response.ok) {
             // After successful signup, redirect to login with a success message
+            form.reset();
             window.location.href = 'login.html?registered=true';
         } else {
             showError(data.detail || "Signup failed");
@@ -120,21 +117,45 @@ function hideError() {
     }
 }
 
+// Helper to securely clear forms on load or back navigation
+function clearForms() {
+    const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
+    const loginBtn = document.getElementById('login-btn');
+    const signupBtn = document.getElementById('signup-btn');
+    
+    if (loginForm) loginForm.reset();
+    if (signupForm) signupForm.reset();
+    
+    if (loginBtn) {
+        loginBtn.disabled = false;
+        loginBtn.textContent = 'Login';
+    }
+    if (signupBtn) {
+        signupBtn.disabled = false;
+        signupBtn.textContent = 'Create Account';
+    }
+}
+
+// Clear forms when navigating back via browser history cache
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        clearForms();
+        setTimeout(clearForms, 100); // Defeat delayed browser autofill
+    }
+});
+
 // Attach event listeners
 document.addEventListener('DOMContentLoaded', () => {
+    clearForms();
+    setTimeout(clearForms, 100); // Defeat delayed browser autofill
     const loginForm = document.getElementById('login-form');
     if (loginForm) loginForm.addEventListener('submit', handleLogin);
     
     const signupForm = document.getElementById('signup-form');
     if (signupForm) signupForm.addEventListener('submit', handleSignup);
     
-    const continueBtn = document.getElementById('continue-tracker-btn');
-    if (continueBtn) {
-        continueBtn.addEventListener('click', (e) => {
-            e.preventDefault();
-            checkSessionAndRedirect();
-        });
-    }
+    // (continue-tracker-btn removed)
     
     // Show success message if redirected from signup
     const urlParams = new URLSearchParams(window.location.search);

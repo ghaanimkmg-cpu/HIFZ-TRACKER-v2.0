@@ -428,3 +428,27 @@ def login(payload: LoginRequest, response: Response) -> dict:
         "id": user["id"],
         "username": user["username"],
     }
+
+@app.post(
+    "/auth/logout",
+    status_code=status.HTTP_200_OK,
+    tags=["Auth"],
+)
+def logout(request: Request, response: Response) -> dict:
+    """
+    POST /auth/logout
+    Log the current user out by destroying their session and clearing the cookie.
+    Idempotent: works even if the user isn't logged in.
+    """
+    token = request.cookies.get("session_token")
+    if token:
+        from auth import delete_session
+        delete_session(token)
+    
+    response.delete_cookie(
+        key="session_token",
+        httponly=True,
+        samesite="lax",
+    )
+    
+    return {"status": "ok", "message": "Logged out successfully"}

@@ -1335,6 +1335,27 @@ function initSplash() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// LOGOUT
+// ─────────────────────────────────────────────────────────────────────────────
+
+const btnLogout = document.getElementById('btn-logout');
+if (btnLogout) {
+  btnLogout.addEventListener('click', async () => {
+    btnLogout.disabled = true;
+    btnLogout.textContent = 'Logging out...';
+    try {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch (err) {
+      console.warn("Logout request failed:", err);
+    }
+    window.location.href = 'login.html';
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // BOOT
 // ─────────────────────────────────────────────────────────────────────────────
 
