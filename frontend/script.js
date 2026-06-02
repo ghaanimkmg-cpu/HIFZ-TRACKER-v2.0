@@ -620,7 +620,7 @@ formDailyProgress.addEventListener('submit', async (e) => {
 
   // Parse Sabaq Para
   const spNotRecited = dpSpNotRecited.checked;
-  const spJuz = student.current_juz; // Juz is fixed to current
+  const spJuz = currentUpdateStudent.current_juz; // Juz is fixed to current
   const spStartSurah = document.getElementById('dp-sp-start-surah') ? document.getElementById('dp-sp-start-surah').value : null;
   const spStart = parseInt(document.getElementById('dp-sp-start').value, 10);
   const spEndSurah = document.getElementById('dp-sp-end-surah') ? document.getElementById('dp-sp-end-surah').value : null;
