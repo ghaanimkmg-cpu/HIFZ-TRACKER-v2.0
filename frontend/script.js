@@ -409,9 +409,11 @@ async function openUpdateModal(student) {
         }
 
         // Pre-fill end ayah = end_ayah from latest SABAQ PARA record (if one exists)
+        // Cap it to the surah's actual total ayah count to avoid invalid defaults.
         const dpSpEndEl = document.getElementById('dp-sp-end');
+        const surahMaxAyahs = SURAH_AYAHS[firstSurahOfJuz] || 999;
         if (dpSpEndEl && latestSpRecord && latestSpRecord.end_ayah) {
-            dpSpEndEl.value = latestSpRecord.end_ayah;
+            dpSpEndEl.value = Math.min(latestSpRecord.end_ayah, surahMaxAyahs);
         } else if (dpSpEndEl) {
             dpSpEndEl.value = ''; // No previous record — leave blank for manual entry
         }
@@ -594,8 +596,23 @@ formDailyProgress.addEventListener('submit', async (e) => {
       dpError.hidden = false;
       return;
     }
-    
-    // Phase F.1: Validate against EXACT memorized ayahs
+
+    // Check 1: Validate ayah numbers don't exceed what the Surah actually has.
+    const surahTotalAyahs = SURAH_AYAHS[spSurah] || 999;
+    const outOfRange = [];
+    for (let i = spStart; i <= spEnd; i++) {
+        if (i > surahTotalAyahs) outOfRange.push(i);
+    }
+    if (outOfRange.length > 0) {
+      const rangeStr = outOfRange.length === 1
+        ? `Ayah ${outOfRange[0]}`
+        : `Ayah ${outOfRange[0]}-${outOfRange[outOfRange.length - 1]}`;
+      dpError.textContent = `${spSurah} only has ${surahTotalAyahs} ayahs. ${rangeStr} does not exist in this Surah.`;
+      dpError.hidden = false;
+      return;
+    }
+
+    // Check 2: Validate against EXACT memorized ayahs
     const memorizedSet = currentMemorizedAyahsSet[spSurah] || new Set();
     const missingAyahs = [];
     for (let i = spStart; i <= spEnd; i++) {
