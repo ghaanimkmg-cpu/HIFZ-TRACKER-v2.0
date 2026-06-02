@@ -22,7 +22,7 @@ echo.
 
 :: ── Start Backend (FastAPI + uvicorn with --reload) ───────────────────────
 echo [2/4] Starting backend on http://127.0.0.1:8081  (with auto-reload)...
-start "HIFZ Backend" cmd /k "cd /d "%~dp0backend" && python -m uvicorn main:app --host 127.0.0.1 --port 8081 --reload"
+start "HIFZ Backend" cmd /k "cd /d "%~dp0backend" && python -m uvicorn main:app --host 127.0.0.1 --port 8081 --reload --reload-exclude \"*.db\" --reload-exclude \"*.db-journal\""
 
 :: ── Give uvicorn a moment to boot ─────────────────────────────────────────
 echo [3/4] Waiting for backend to start...

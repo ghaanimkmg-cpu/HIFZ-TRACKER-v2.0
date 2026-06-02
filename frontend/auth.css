@@ -1,0 +1,221 @@
+/* auth.css - ZaryahPlus Premium Auth UI */
+
+:root {
+  --auth-bg: #f9fafb;
+  --auth-surface: #ffffff;
+  --auth-text-main: #111827;
+  --auth-text-muted: #6b7280;
+  --auth-primary: #111827;
+  --auth-primary-hover: #374151;
+  --auth-border: #e5e7eb;
+  --auth-input-bg: #ffffff;
+  --auth-input-focus: #111827;
+  --auth-radius: 12px;
+  --auth-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  --auth-font: 'Inter', system-ui, -apple-system, sans-serif;
+  --auth-gold: #d4af37;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--auth-font);
+  background-color: var(--auth-bg);
+  color: var(--auth-text-main);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+}
+
+.auth-container {
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  min-height: 600px;
+  background: var(--auth-surface);
+  border-radius: var(--auth-radius);
+  box-shadow: var(--auth-shadow);
+  overflow: hidden;
+  margin: 20px;
+}
+
+/* Left Side - Branding */
+.auth-branding {
+  flex: 1;
+  background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  color: #fff;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.auth-branding::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(circle at top right, rgba(212, 175, 55, 0.15) 0%, transparent 60%);
+}
+
+.brand-zaryah {
+  font-size: 14px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--auth-gold);
+  font-weight: 600;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.brand-title {
+  font-size: 42px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  position: relative;
+}
+
+.brand-desc {
+  font-size: 18px;
+  color: #9ca3af;
+  line-height: 1.5;
+  font-weight: 300;
+  max-width: 90%;
+  position: relative;
+}
+
+/* Right Side - Form */
+.auth-form-wrapper {
+  flex: 1;
+  padding: 60px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background: var(--auth-surface);
+}
+
+.auth-header {
+  margin-bottom: 40px;
+}
+
+.auth-header h2 {
+  font-size: 28px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.auth-header p {
+  color: var(--auth-text-muted);
+  font-size: 15px;
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-text-main);
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+  font-family: inherit;
+  border: 1px solid var(--auth-border);
+  border-radius: 8px;
+  background: var(--auth-input-bg);
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--auth-input-focus);
+  box-shadow: 0 0 0 1px var(--auth-input-focus);
+}
+
+.btn-submit {
+  background: var(--auth-primary);
+  color: #fff;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  margin-top: 8px;
+}
+
+.btn-submit:hover {
+  background: var(--auth-primary-hover);
+}
+
+.btn-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.auth-links {
+  margin-top: 32px;
+  text-align: center;
+  font-size: 14px;
+  color: var(--auth-text-muted);
+}
+
+.auth-links a {
+  color: var(--auth-primary);
+  text-decoration: none;
+  font-weight: 600;
+  margin-left: 4px;
+}
+
+.auth-links a:hover {
+  text-decoration: underline;
+}
+
+.auth-error {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 20px;
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 860px) {
+  .auth-container {
+    flex-direction: column;
+  }
+  .auth-branding {
+    padding: 40px;
+    flex: none;
+  }
+  .brand-title {
+    font-size: 32px;
+  }
+  .auth-form-wrapper {
+    padding: 40px;
+  }
+}

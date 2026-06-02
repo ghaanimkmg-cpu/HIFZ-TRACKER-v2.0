@@ -15,27 +15,28 @@ from typing import Any
 
 from database import get_connection
 
-def get_all_students() -> list[dict[str, Any]]:
+def get_all_students(user_id: int) -> list[dict[str, Any]]:
     """
-    Return every student row as a list of plain dicts.
+    Return every student row belonging to the specified user as a list of plain dicts.
     Ordered by batch_year ASC, then full_name ASC.
     """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM students ORDER BY batch_year ASC, full_name ASC"
+        "SELECT * FROM students WHERE user_id = ? ORDER BY batch_year ASC, full_name ASC",
+        (user_id,)
     )
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
 
-def get_student_by_id(student_id: int) -> dict[str, Any] | None:
-    """Return a single student dict or None if not found."""
+def get_student_by_id(student_id: int, user_id: int) -> dict[str, Any] | None:
+    """Return a single student dict or None if not found or not owned by user."""
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "SELECT * FROM students WHERE id = ?",
-        (student_id,)
+        "SELECT * FROM students WHERE id = ? AND user_id = ?",
+        (student_id, user_id)
     )
     row = cursor.fetchone()
     conn.close()
@@ -49,10 +50,11 @@ def create_student(
     current_juz: int,
     current_surah: str,
     current_ayah: str,
+    user_id: int,
     previous_juz: str = "",
 ) -> dict[str, Any]:
     """
-    Insert a new student row and return the complete record.
+    Insert a new student row associated with a user and return the complete record.
     Timestamps are stored as ISO-8601 UTC strings.
     """
     now_iso = datetime.now(timezone.utc).isoformat()
@@ -62,18 +64,18 @@ def create_student(
         """
         INSERT INTO students
             (full_name, batch_year, current_juz, current_surah, current_ayah,
-             previous_juz, last_updated, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+             previous_juz, user_id, last_updated, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (full_name, batch_year, current_juz, current_surah, current_ayah,
-         previous_juz, now_iso, now_iso),
+         previous_juz, user_id, now_iso, now_iso),
     )
     conn.commit()
     new_id = cursor.lastrowid
     conn.close()
     if new_id is None:
         raise RuntimeError("Database insert failed.")
-    student = get_student_by_id(new_id)
+    student = get_student_by_id(new_id, user_id)
     if student is None:
         raise RuntimeError("Failed to fetch newly created student.")
     return student
@@ -84,10 +86,11 @@ def update_student_progress(
     current_surah: str,
     current_ayah: str,
     update_date: str,
+    user_id: int,
 ) -> dict[str, Any] | None:
     """
     Update Juz / Surah / Ayah for a student and log to progress_history.
-    Returns the updated student dict, or None if the id does not exist.
+    Returns the updated student dict, or None if the id does not exist or not owned.
     """
     now_iso = datetime.now(timezone.utc).isoformat()
     conn = get_connection()
@@ -99,9 +102,9 @@ def update_student_progress(
                current_surah = ?,
                current_ayah  = ?,
                last_updated  = ?
-         WHERE id = ?
+         WHERE id = ? AND user_id = ?
         """,
-        (current_juz, current_surah, current_ayah, now_iso, student_id),
+        (current_juz, current_surah, current_ayah, now_iso, student_id, user_id),
     )
     affected = cursor.rowcount
     if affected > 0:
@@ -117,10 +120,13 @@ def update_student_progress(
     conn.close()
     if affected == 0:
         return None
-    return get_student_by_id(student_id)
+    return get_student_by_id(student_id, user_id)
 
-def get_student_history(student_id: int) -> list[dict[str, Any]]:
-    """Fetch all history records for a specific student."""
+def get_student_history(student_id: int, user_id: int) -> list[dict[str, Any]]:
+    """Fetch all history records for a specific student, enforcing ownership."""
+    if not get_student_by_id(student_id, user_id):
+        return []
+    
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -131,31 +137,34 @@ def get_student_history(student_id: int) -> list[dict[str, Any]]:
     conn.close()
     return [dict(row) for row in rows]
 
-def delete_student(student_id: int) -> bool:
+def delete_student(student_id: int, user_id: int) -> bool:
     """
-    Delete a student by id.
-    Returns True if a row was deleted, False if no such id existed.
+    Delete a student by id, strictly enforcing ownership.
+    Returns True if a row was deleted, False if no such id existed or unowned.
     """
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        "DELETE FROM students WHERE id = ?",
-        (student_id,)
+        "DELETE FROM students WHERE id = ? AND user_id = ?",
+        (student_id, user_id)
     )
     conn.commit()
     affected = cursor.rowcount
     conn.close()
     return affected > 0
 
-def get_memorized_juz(student_id: int) -> list[int]:
+def get_memorized_juz(student_id: int, user_id: int) -> list[int]:
     """
     Return a list of all unique Juz numbers the student has ever interacted with,
     including their current_juz and any juz found in progress_history and daily_progress_records.
     """
+    if not get_student_by_id(student_id, user_id):
+        return []
+        
     conn = get_connection()
     cursor = conn.cursor()
     
-    cursor.execute("SELECT current_juz, previous_juz FROM students WHERE id = ?", (student_id,))
+    cursor.execute("SELECT current_juz, previous_juz FROM students WHERE id = ? AND user_id = ?", (student_id, user_id))
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -181,7 +190,11 @@ def get_memorized_juz(student_id: int) -> list[int]:
     conn.close()
     return sorted(list(juz_set))
 
-def create_daily_progress(student_id: int, date: str, records: list[dict], comment: str | None = None) -> None:
+def create_daily_progress(student_id: int, date: str, records: list[dict], user_id: int, comment: str | None = None) -> bool:
+    """Create daily progress records, enforcing ownership."""
+    if not get_student_by_id(student_id, user_id):
+        return False
+
     now_iso = datetime.now(timezone.utc).isoformat()
     conn = get_connection()
     cursor = conn.cursor()
@@ -208,9 +221,13 @@ def create_daily_progress(student_id: int, date: str, records: list[dict], comme
         )
     conn.commit()
     conn.close()
+    return True
 
-def get_student_daily_progress(student_id: int) -> list[dict]:
-    """Fetch all daily progress records for a student."""
+def get_student_daily_progress(student_id: int, user_id: int) -> list[dict]:
+    """Fetch all daily progress records for a student, enforcing ownership."""
+    if not get_student_by_id(student_id, user_id):
+        return []
+
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute("""

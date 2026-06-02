@@ -233,9 +233,9 @@ class RegisterRequest(BaseModel):
         if not s:
             raise ValueError("Username cannot be blank.")
         import re as _re
-        if not _re.match(r"^[A-Za-z0-9_\-]+$", s):
+        if not _re.match(r"^[A-Za-z0-9_\-\.@]+$", s):
             raise ValueError(
-                "Username may only contain letters, numbers, underscores, and hyphens."
+                "Username may only contain letters, numbers, underscores, hyphens, @, and dots."
             )
         return s
 

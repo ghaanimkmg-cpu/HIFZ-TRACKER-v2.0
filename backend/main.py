@@ -92,7 +92,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # tightened in production
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -112,7 +112,7 @@ def list_students(user_id: int = Depends(require_auth)) -> list[dict[str, Any]]:
     PROTECTED: valid session cookie required (Phase 4).
     Phase 6 will filter by user_id to return only the logged-in user's students.
     """
-    return get_all_students()
+    return get_all_students(user_id)
 
 @app.post(
     "/students",
@@ -135,6 +135,7 @@ def add_student(payload: StudentCreate, user_id: int = Depends(require_auth)) ->
         current_juz=payload.current_juz,
         current_surah=payload.current_surah,
         current_ayah=payload.current_ayah,
+        user_id=user_id,
         previous_juz=",".join(map(str, payload.previous_juz))
     )
     return student
@@ -159,6 +160,7 @@ def update_student(student_id: int, payload: StudentUpdate, user_id: int = Depen
         current_surah=payload.current_surah,
         current_ayah=payload.current_ayah,
         update_date=payload.update_date,
+        user_id=user_id,
     )
     if updated is None:
         raise HTTPException(
@@ -178,7 +180,7 @@ def get_history(student_id: int, user_id: int = Depends(require_auth)) -> list[d
     Return the update history for a specific student.
     PROTECTED: valid session cookie required (Phase 4).
     """
-    return get_student_history(student_id)
+    return get_student_history(student_id, user_id)
 
 @app.delete(
     "/students/{student_id}",
@@ -194,7 +196,7 @@ def remove_student(student_id: int, user_id: int = Depends(require_auth)) -> Non
     PROTECTED: valid session cookie required (Phase 4).
     Phase 6 will verify the student belongs to the logged-in user.
     """
-    deleted = delete_student(student_id)
+    deleted = delete_student(student_id, user_id)
     if not deleted:
         raise HTTPException(
             status_code=404,
@@ -213,10 +215,10 @@ def get_daily_progress(student_id: int, user_id: int = Depends(require_auth)) ->
     Return all comprehensive daily progress records for a student.
     PROTECTED: valid session cookie required (Phase 4).
     """
-    student = get_student_by_id(student_id)
+    student = get_student_by_id(student_id, user_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found")
-    return get_student_daily_progress(student_id)
+    return get_student_daily_progress(student_id, user_id)
 
 @app.post(
     "/students/{student_id}/daily-progress",
@@ -229,11 +231,11 @@ def add_daily_progress(student_id: int, payload: DailyProgressCreate, user_id: i
     Submit a daily progress update (SABAQ, SABAQ PARA, PARA).
     PROTECTED: valid session cookie required (Phase 4).
     """
-    student = get_student_by_id(student_id)
+    student = get_student_by_id(student_id, user_id)
     if not student:
         raise HTTPException(status_code=404, detail="Student not found.")
         
-    memorized_juz = get_memorized_juz(student_id)
+    memorized_juz = get_memorized_juz(student_id, user_id)
     
     # Parse the student's current_ayah bounds
     try:
@@ -281,7 +283,7 @@ def add_daily_progress(student_id: int, payload: DailyProgressCreate, user_id: i
 
     # Convert Pydantic models to dicts and save
     dicts = [r.model_dump() for r in payload.records]
-    create_daily_progress(student_id, payload.date, dicts, payload.comment)
+    create_daily_progress(student_id, payload.date, dicts, user_id, payload.comment)
     
     return {"status": "ok", "message": "Records saved successfully."}
 

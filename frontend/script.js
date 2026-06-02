@@ -28,7 +28,7 @@
  * Base URL of the FastAPI backend.
  * We use 8080 because ports 8000/8001 are occupied or blocked.
  */
-const API_BASE = 'http://127.0.0.1:8081';
+const API_BASE = window.location.protocol + '//' + window.location.hostname + ':8081';
 
 /**
  * Complete ordered list of Quran Surahs.
@@ -854,8 +854,15 @@ function limitAyahBySurah(surahName, ayahInput) {
 async function apiFetch(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { 'Content-Type': 'application/json', ...options.headers },
+    credentials: 'include',
     ...options,
   });
+  
+  if (response.status === 401) {
+    window.location.href = 'login.html';
+    throw new Error('Unauthorized');
+  }
+  
   if (response.status === 204) return null; // No Content
   const data = await response.json();
   if (!response.ok) {
