@@ -171,6 +171,7 @@ class DailyRecordItem(BaseModel):
     juz: int | None = None
     surah: str | None = None
     start_ayah: int | None = None
+    end_surah: str | None = None
     end_ayah: int | None = None
     not_recited: bool = False
 
@@ -188,6 +189,7 @@ class DailyProgressRecordResponse(BaseModel):
     juz: int | None
     surah: str | None
     start_ayah: int | None
+    end_surah: str | None
     end_ayah: int | None
     comment: str | None
     not_recited: bool

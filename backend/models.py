@@ -203,8 +203,8 @@ def create_daily_progress(student_id: int, date: str, records: list[dict], user_
         cursor.execute(
             """
             INSERT INTO daily_progress_records
-                (student_id, date, type, juz, surah, start_ayah, end_ayah, comment, not_recited, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                (student_id, date, type, juz, surah, start_ayah, end_surah, end_ayah, comment, not_recited, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 student_id,
@@ -213,6 +213,7 @@ def create_daily_progress(student_id: int, date: str, records: list[dict], user_
                 rec.get("juz"),
                 rec.get("surah"),
                 rec.get("start_ayah"),
+                rec.get("end_surah"),
                 rec.get("end_ayah"),
                 comment,
                 1 if rec.get("not_recited") else 0,

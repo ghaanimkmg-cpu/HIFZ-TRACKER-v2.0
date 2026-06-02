@@ -682,27 +682,23 @@ formDailyProgress.addEventListener('submit', async (e) => {
         }
     }
 
-    // Add to records
-    for (let i = 0; i < surahsInRange.length; i++) {
-        const currentSurah = surahsInRange[i];
-        const sAyah = (i === 0) ? spStart : 1;
-        const eAyah = (i === surahsInRange.length - 1) ? spEnd : (SURAH_AYAHS[currentSurah] || 999);
-
-        records.push({
-            type: "SABAQ PARA",
-            juz: spJuz,
-            surah: currentSurah,
-            start_ayah: sAyah,
-            end_ayah: eAyah,
-            not_recited: false
-        });
-    }
+    // Add to records as a SINGLE unified entry
+    records.push({
+        type: "SABAQ PARA",
+        juz: spJuz,
+        surah: spStartSurah,
+        start_ayah: spStart,
+        end_surah: spEndSurah,
+        end_ayah: spEnd,
+        not_recited: false
+    });
   } else {
     records.push({
       type: "SABAQ PARA",
       juz: null,
       surah: null,
       start_ayah: null,
+      end_surah: null,
       end_ayah: null,
       not_recited: true
     });
@@ -1223,7 +1219,16 @@ function buildStudentCard(student) {
                  </div>`;
             } else {
                let badge = r.not_recited ? '<span class="tl-badge badge-not-recited">Not Recited</span>' : '';
-               let detail = r.not_recited ? '' : (r.surah ? `Juz ${r.juz}, ${escapeHtml(r.surah)} (${r.start_ayah}-${r.end_ayah})` : `Juz ${r.juz}`);
+               let detail = '';
+               if (!r.not_recited) {
+                   if (r.surah && r.end_surah && r.surah !== r.end_surah) {
+                       detail = `Juz ${r.juz}, ${escapeHtml(r.surah)} (${r.start_ayah}) to ${escapeHtml(r.end_surah)} (${r.end_ayah})`;
+                   } else if (r.surah) {
+                       detail = `Juz ${r.juz}, ${escapeHtml(r.surah)} (${r.start_ayah}-${r.end_ayah})`;
+                   } else {
+                       detail = `Juz ${r.juz}`;
+                   }
+               }
                let typeClass = r.type.replace(' ', '-').toLowerCase();
                
                dateContent += `

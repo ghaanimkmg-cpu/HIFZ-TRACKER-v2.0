@@ -72,6 +72,7 @@ def initialize_database() -> None:
             juz          INTEGER,
             surah        TEXT,
             start_ayah   INTEGER,
+            end_surah    TEXT,
             end_ayah     INTEGER,
             comment      TEXT,
             not_recited  INTEGER DEFAULT 0,
