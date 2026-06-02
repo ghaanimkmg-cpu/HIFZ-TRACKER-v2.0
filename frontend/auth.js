@@ -210,11 +210,18 @@ async function handleForgotPassword(event) {
         const data = await response.json();
         
         if (response.ok) {
+            const resolvedUsername = username; // capture before form.reset() clears it
             form.reset();
             const successDiv = document.getElementById('success-msg');
             if (successDiv) {
-                // Show prototype token on screen
-                successDiv.innerHTML = `${data.message}<br><br><b>PROTOTYPE TOKEN:</b><br>${data.reset_token || 'None'}<br><br><a href="reset-password.html" style="color:var(--auth-gold)">Proceed to Reset Password</a>`;
+                successDiv.innerHTML = `
+                    ${data.message}<br><br>
+                    <b>YOUR USERNAME (use this to log in):</b><br>
+                    <span style="font-size:15px;letter-spacing:0.5px">${resolvedUsername}</span><br><br>
+                    <b>PROTOTYPE RESET TOKEN:</b><br>
+                    ${data.reset_token || 'None'}<br><br>
+                    <a href="reset-password.html" style="color:var(--auth-gold);font-weight:700">Proceed to Reset Password &rarr;</a>
+                `;
                 successDiv.style.display = 'block';
             }
             btn.textContent = 'Token Generated';
