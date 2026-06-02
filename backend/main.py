@@ -260,9 +260,23 @@ def add_daily_progress(student_id: int, payload: DailyProgressCreate, user_id: i
         if rec.surah not in SURAH_AYAHS:
             raise HTTPException(status_code=422, detail=f"Invalid surah {rec.surah}.")
             
-        max_ayahs = SURAH_AYAHS[rec.surah]
-        if rec.start_ayah < 1 or rec.end_ayah > max_ayahs or rec.start_ayah > rec.end_ayah:
-            raise HTTPException(status_code=422, detail=f"Invalid ayah bounds for {rec.surah}. Max is {max_ayahs}.")
+        max_start_ayahs = SURAH_AYAHS[rec.surah]
+        if rec.start_ayah < 1 or rec.start_ayah > max_start_ayahs:
+            raise HTTPException(status_code=422, detail=f"Invalid start ayah bounds for {rec.surah}. Max is {max_start_ayahs}.")
+            
+        if getattr(rec, 'end_surah', None):
+            if rec.end_surah not in SURAH_AYAHS:
+                raise HTTPException(status_code=422, detail=f"Invalid end surah {rec.end_surah}.")
+            max_end_ayahs = SURAH_AYAHS[rec.end_surah]
+            if rec.end_ayah < 1 or rec.end_ayah > max_end_ayahs:
+                raise HTTPException(status_code=422, detail=f"Invalid end ayah bounds for {rec.end_surah}. Max is {max_end_ayahs}.")
+            
+            # if same surah, start cannot be > end
+            if rec.surah == rec.end_surah and rec.start_ayah > rec.end_ayah:
+                raise HTTPException(status_code=422, detail=f"Invalid ayah range for {rec.surah}.")
+        else:
+            if rec.end_ayah < 1 or rec.end_ayah > max_start_ayahs or rec.start_ayah > rec.end_ayah:
+                raise HTTPException(status_code=422, detail=f"Invalid ayah bounds for {rec.surah}. Max is {max_start_ayahs}.")
 
         if rec.type == "SABAQ":
             pass # SABAQ logic is just bounds validation
@@ -271,12 +285,13 @@ def add_daily_progress(student_id: int, payload: DailyProgressCreate, user_id: i
             if rec.juz != student["current_juz"]:
                 raise HTTPException(status_code=422, detail="SABAQ PARA juz must match current juz.")
             
-            target_order = SURAH_ORDER.get(rec.surah, 999)
+            target_end_order = SURAH_ORDER.get(getattr(rec, 'end_surah', None) or rec.surah, 999)
             current_order = SURAH_ORDER.get(student["current_surah"], 999)
             
-            if target_order > current_order:
-                raise HTTPException(status_code=422, detail=f"Cannot revise future surah {rec.surah}.")
-            elif target_order == current_order:
+            if target_end_order > current_order:
+                end_surah_name = getattr(rec, 'end_surah', None) or rec.surah
+                raise HTTPException(status_code=422, detail=f"Cannot revise future surah {end_surah_name}.")
+            elif target_end_order == current_order:
                 if rec.end_ayah > student_current_ayah_upper:
                     raise HTTPException(status_code=422, detail=f"Cannot exceed memorized ayah {student_current_ayah_upper}.")
                 
