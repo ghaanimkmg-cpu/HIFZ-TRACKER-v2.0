@@ -384,12 +384,14 @@ async function openUpdateModal(student) {
         // --- SMART DEFAULT: Pre-fill Sabaq Para ayah range ---
         // Rule:
         //   Start Ayah = 1 (first ayah of the first surah of this Juz)
-        //   End Ayah   = end_ayah from the most recent SABAQ PARA record
-        //   Surah      = first surah of the current Juz (the para always starts there)
+        //   End Ayah   = end_ayah of the PREVIOUS SABAQ record
+        //                (Sabaq Para = revise everything memorised before today's new lesson)
+        //   Example: if today's sabaq is 21-30, the student memorised up to ayah 20 before today,
+        //            so Sabaq Para default is 1-20.
 
-        // Find latest SABAQ PARA record (dailyProgress is already sorted latest-first by the API)
-        const latestSpRecord = dailyProgress
-            .filter(dp => dp.type === 'SABAQ PARA' && !dp.not_recited && dp.end_ayah)
+        // Find the latest SABAQ record that was actually recited (not marked not-recited)
+        const latestSabaqRecord = dailyProgress
+            .filter(dp => dp.type === 'SABAQ' && !dp.not_recited && dp.end_ayah)
             .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
 
         // Get the first surah in the current Juz from JUZ_SURAHS
@@ -408,14 +410,13 @@ async function openUpdateModal(student) {
             dpSpStartEl.value = 1;
         }
 
-        // Pre-fill end ayah = end_ayah from latest SABAQ PARA record (if one exists)
-        // Cap it to the surah's actual total ayah count to avoid invalid defaults.
+        // Pre-fill end ayah = end_ayah of the latest SABAQ record (capped to surah max)
         const dpSpEndEl = document.getElementById('dp-sp-end');
         const surahMaxAyahs = SURAH_AYAHS[firstSurahOfJuz] || 999;
-        if (dpSpEndEl && latestSpRecord && latestSpRecord.end_ayah) {
-            dpSpEndEl.value = Math.min(latestSpRecord.end_ayah, surahMaxAyahs);
+        if (dpSpEndEl && latestSabaqRecord && latestSabaqRecord.end_ayah) {
+            dpSpEndEl.value = Math.min(latestSabaqRecord.end_ayah, surahMaxAyahs);
         } else if (dpSpEndEl) {
-            dpSpEndEl.value = ''; // No previous record — leave blank for manual entry
+            dpSpEndEl.value = ''; // No previous sabaq record — leave blank for manual entry
         }
     }
 
