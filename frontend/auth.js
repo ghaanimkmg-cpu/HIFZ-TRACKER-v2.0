@@ -168,7 +168,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if (forgotForm) forgotForm.addEventListener('submit', handleForgotPassword);
     
     const resetForm = document.getElementById('reset-password-form');
-    if (resetForm) resetForm.addEventListener('submit', handleResetPassword);
+    if (resetForm) {
+        resetForm.addEventListener('submit', handleResetPassword);
+        // Populate the hidden username field from sessionStorage so Chrome's
+        // password manager saves the correct username (not the token).
+        try {
+            const savedUsername = sessionStorage.getItem('reset_username');
+            const rpUsernameField = document.getElementById('rp-username');
+            if (savedUsername && rpUsernameField) {
+                rpUsernameField.value = savedUsername;
+            }
+        } catch(e) {}
+    }
     
     // Show success message if redirected from signup
     const urlParams = new URLSearchParams(window.location.search);
@@ -211,6 +222,9 @@ async function handleForgotPassword(event) {
         
         if (response.ok) {
             const resolvedUsername = username; // capture before form.reset() clears it
+            // Store in sessionStorage so reset-password.html can populate the hidden
+            // username field — this ensures Chrome saves the right credentials.
+            try { sessionStorage.setItem('reset_username', resolvedUsername); } catch(e) {}
             form.reset();
             const successDiv = document.getElementById('success-msg');
             if (successDiv) {
@@ -264,6 +278,7 @@ async function handleResetPassword(event) {
         const data = await response.json();
         
         if (response.ok) {
+            try { sessionStorage.removeItem('reset_username'); } catch(e) {}
             form.reset();
             window.location.href = 'login.html';
         } else {
