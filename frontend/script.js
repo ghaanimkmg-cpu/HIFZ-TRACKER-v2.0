@@ -211,8 +211,8 @@ const dpSabaqNotRecited     = document.getElementById('dp-sabaq-not-recited');
 const dpSpNotRecited        = document.getElementById('dp-sp-not-recited');
 const dpSabaqJuzGroup       = document.getElementById('dp-sabaq-juz-group');
 const dpSabaqSurahGroup     = document.getElementById('dp-sabaq-surah-group');
-const dpSpJuzInput          = document.getElementById('dp-sp-juz');
-const dpSpSurahGroup        = document.getElementById('dp-sp-surah-group');
+const dpSpStartSurahGroup   = document.getElementById('dp-sp-start-surah-group');
+const dpSpEndSurahGroup     = document.getElementById('dp-sp-end-surah-group');
 const paraEntriesContainer  = document.getElementById('para-entries-container');
 const btnAddPara            = document.getElementById('btn-add-para');
 const dpDateInput           = document.getElementById('dp-date');
@@ -275,19 +275,26 @@ async function openUpdateModal(student) {
   filterSurahsByJuz(student.current_juz, dpSabaqSurahSel, student.current_surah);
   dpSabaqJuzSel.addEventListener('change', () => filterSurahsByJuz(parseInt(dpSabaqJuzSel.value, 10), dpSabaqSurahSel));
 
-  // Sabaq Para Dropdowns (Juz is locked)
-  dpSpJuzInput.value = `Juz ${student.current_juz}`;
-  dpSpJuzInput.dataset.val = student.current_juz;
+  // Sabaq Para Dropdowns
+  dpSpStartSurahGroup.innerHTML = '';
+  const dpSpStartSurahLabel = document.createElement('label');
+  dpSpStartSurahLabel.className = 'form-label';
+  dpSpStartSurahLabel.textContent = 'Start Surah';
+  const dpSpStartSurahSel = buildSurahSelect(student.current_surah);
+  dpSpStartSurahSel.id = 'dp-sp-start-surah';
+  dpSpStartSurahGroup.appendChild(dpSpStartSurahLabel);
+  dpSpStartSurahGroup.appendChild(dpSpStartSurahSel);
+  filterSurahsByJuz(student.current_juz, dpSpStartSurahSel, student.current_surah);
 
-  dpSpSurahGroup.innerHTML = '';
-  const dpSpSurahLabel = document.createElement('label');
-  dpSpSurahLabel.className = 'form-label';
-  dpSpSurahLabel.textContent = 'Surah';
-  const dpSpSurahSel = buildSurahSelect(student.current_surah);
-  dpSpSurahSel.id = 'dp-sp-surah';
-  dpSpSurahGroup.appendChild(dpSpSurahLabel);
-  dpSpSurahGroup.appendChild(dpSpSurahSel);
-  filterSurahsByJuz(student.current_juz, dpSpSurahSel, student.current_surah);
+  dpSpEndSurahGroup.innerHTML = '';
+  const dpSpEndSurahLabel = document.createElement('label');
+  dpSpEndSurahLabel.className = 'form-label';
+  dpSpEndSurahLabel.textContent = 'End Surah';
+  const dpSpEndSurahSel = buildSurahSelect(student.current_surah);
+  dpSpEndSurahSel.id = 'dp-sp-end-surah';
+  dpSpEndSurahGroup.appendChild(dpSpEndSurahLabel);
+  dpSpEndSurahGroup.appendChild(dpSpEndSurahSel);
+  filterSurahsByJuz(student.current_juz, dpSpEndSurahSel, student.current_surah);
 
   // Fetch memorized juz for PARA dropdowns
   paraEntriesContainer.innerHTML = '<div style="color:var(--color-text-muted); font-size:12px;">Loading memorized juz...</div>';
@@ -399,25 +406,27 @@ async function openUpdateModal(student) {
         const juzSurahList = JUZ_SURAHS[student.current_juz] || [];
         const firstSurahOfJuz = juzSurahList.length > 0 ? juzSurahList[0] : student.current_surah;
 
-        // Set the Sabaq Para surah dropdown to the first surah of the juz
-        const dpSpSurahEl = document.getElementById('dp-sp-surah');
-        if (dpSpSurahEl) {
-            dpSpSurahEl.value = firstSurahOfJuz;
+        // Pre-fill Start Surah
+        const dpSpStartSurahEl = document.getElementById('dp-sp-start-surah');
+        if (dpSpStartSurahEl) {
+            dpSpStartSurahEl.value = firstSurahOfJuz;
         }
 
-        // Pre-fill start ayah = 1
+        // Pre-fill Start Ayah = 1
         const dpSpStartEl = document.getElementById('dp-sp-start');
         if (dpSpStartEl) {
             dpSpStartEl.value = 1;
         }
 
-        // Pre-fill end ayah = end_ayah of the latest SABAQ record (capped to surah max)
+        // Pre-fill End Surah and End Ayah
+        const dpSpEndSurahEl = document.getElementById('dp-sp-end-surah');
         const dpSpEndEl = document.getElementById('dp-sp-end');
-        const surahMaxAyahs = SURAH_AYAHS[firstSurahOfJuz] || 999;
-        if (dpSpEndEl && latestSabaqRecord && latestSabaqRecord.end_ayah) {
-            dpSpEndEl.value = Math.min(latestSabaqRecord.end_ayah, surahMaxAyahs);
-        } else if (dpSpEndEl) {
-            dpSpEndEl.value = ''; // No previous sabaq record — leave blank for manual entry
+        if (latestSabaqRecord) {
+            if (dpSpEndSurahEl) dpSpEndSurahEl.value = latestSabaqRecord.surah;
+            if (dpSpEndEl) dpSpEndEl.value = latestSabaqRecord.end_ayah;
+        } else {
+            if (dpSpEndSurahEl) dpSpEndSurahEl.value = firstSurahOfJuz;
+            if (dpSpEndEl) dpSpEndEl.value = '';
         }
     }
 
@@ -609,61 +618,95 @@ formDailyProgress.addEventListener('submit', async (e) => {
     not_recited: sabaqNotRecited
   });
 
-  
   // Parse Sabaq Para
   const spNotRecited = dpSpNotRecited.checked;
-  const spJuz = parseInt(dpSpJuzInput.dataset.val, 10);
-  const spSurah = document.getElementById('dp-sp-surah').value;
+  const spJuz = student.current_juz; // Juz is fixed to current
+  const spStartSurah = document.getElementById('dp-sp-start-surah') ? document.getElementById('dp-sp-start-surah').value : null;
   const spStart = parseInt(document.getElementById('dp-sp-start').value, 10);
+  const spEndSurah = document.getElementById('dp-sp-end-surah') ? document.getElementById('dp-sp-end-surah').value : null;
   const spEnd = parseInt(document.getElementById('dp-sp-end').value, 10);
   
   if (!spNotRecited) {
-    if (!spStart || !spEnd) {
-      dpError.textContent = "Please fill Sabaq Para ayahs.";
+    if (!spStart || !spEnd || !spStartSurah || !spEndSurah) {
+      dpError.textContent = "Please fill Sabaq Para ayahs and surahs.";
       dpError.hidden = false;
       return;
     }
 
-    // Check 1: Validate ayah numbers don't exceed what the Surah actually has.
-    const surahTotalAyahs = SURAH_AYAHS[spSurah] || 999;
-    const outOfRange = [];
-    for (let i = spStart; i <= spEnd; i++) {
-        if (i > surahTotalAyahs) outOfRange.push(i);
-    }
-    if (outOfRange.length > 0) {
-      const rangeStr = outOfRange.length === 1
-        ? `Ayah ${outOfRange[0]}`
-        : `Ayah ${outOfRange[0]}-${outOfRange[outOfRange.length - 1]}`;
-      dpError.textContent = `${spSurah} only has ${surahTotalAyahs} ayahs. ${rangeStr} does not exist in this Surah.`;
+    const startIdx = SURAH_LIST.indexOf(spStartSurah);
+    const endIdx = SURAH_LIST.indexOf(spEndSurah);
+
+    if (startIdx > endIdx) {
+      dpError.textContent = `End Surah (${spEndSurah}) cannot come before Start Surah (${spStartSurah}).`;
       dpError.hidden = false;
       return;
     }
 
-    // Check 2: Validate against EXACT memorized ayahs
-    const memorizedSet = currentMemorizedAyahsSet[spSurah] || new Set();
-    const missingAyahs = [];
-    for (let i = spStart; i <= spEnd; i++) {
-        if (!memorizedSet.has(i)) {
-            missingAyahs.push(i);
+    const surahsInRange = SURAH_LIST.slice(startIdx, endIdx + 1);
+
+    // Validate Ayah boundaries and exact memorization for each Surah
+    for (let i = 0; i < surahsInRange.length; i++) {
+        const currentSurah = surahsInRange[i];
+        const sAyah = (i === 0) ? spStart : 1;
+        const eAyah = (i === surahsInRange.length - 1) ? spEnd : (SURAH_AYAHS[currentSurah] || 999);
+
+        // Check 1: Validate ayah numbers don't exceed what the Surah actually has.
+        const surahTotalAyahs = SURAH_AYAHS[currentSurah] || 999;
+        const outOfRange = [];
+        for (let a = sAyah; a <= eAyah; a++) {
+            if (a > surahTotalAyahs) outOfRange.push(a);
+        }
+        if (outOfRange.length > 0) {
+          const rangeStr = outOfRange.length === 1
+            ? `Ayah ${outOfRange[0]}`
+            : `Ayah ${outOfRange[0]}-${outOfRange[outOfRange.length - 1]}`;
+          dpError.textContent = `${currentSurah} only has ${surahTotalAyahs} ayahs. ${rangeStr} does not exist in this Surah.`;
+          dpError.hidden = false;
+          return;
+        }
+
+        // Check 2: Validate against EXACT memorized ayahs
+        const memorizedSet = currentMemorizedAyahsSet[currentSurah] || new Set();
+        const missingAyahs = [];
+        for (let a = sAyah; a <= eAyah; a++) {
+            if (!memorizedSet.has(a)) {
+                missingAyahs.push(a);
+            }
+        }
+        
+        if (missingAyahs.length > 0) {
+          const missingRanges = formatMissingRanges(missingAyahs);
+          dpError.textContent = `Some selected ayath are not memorized yet. Missing in SABAQ history: Ayah(s) ${missingRanges} in ${currentSurah}.`;
+          dpError.hidden = false;
+          return;
         }
     }
-    
-    if (missingAyahs.length > 0) {
-      const missingRanges = formatMissingRanges(missingAyahs);
-      dpError.textContent = `Some selected ayath are not memorized yet. Missing in SABAQ history: Ayah(s) ${missingRanges} in ${spSurah}.`;
-      dpError.hidden = false;
-      return;
+
+    // Add to records
+    for (let i = 0; i < surahsInRange.length; i++) {
+        const currentSurah = surahsInRange[i];
+        const sAyah = (i === 0) ? spStart : 1;
+        const eAyah = (i === surahsInRange.length - 1) ? spEnd : (SURAH_AYAHS[currentSurah] || 999);
+
+        records.push({
+            type: "SABAQ PARA",
+            juz: spJuz,
+            surah: currentSurah,
+            start_ayah: sAyah,
+            end_ayah: eAyah,
+            not_recited: false
+        });
     }
+  } else {
+    records.push({
+      type: "SABAQ PARA",
+      juz: null,
+      surah: null,
+      start_ayah: null,
+      end_ayah: null,
+      not_recited: true
+    });
   }
-  
-  records.push({
-    type: "SABAQ PARA",
-    juz: spNotRecited ? null : spJuz,
-    surah: spNotRecited ? null : spSurah,
-    start_ayah: spNotRecited ? null : spStart,
-    end_ayah: spNotRecited ? null : spEnd,
-    not_recited: spNotRecited
-  });
   
   // Parse Para(s)
   const paraCards = paraEntriesContainer.querySelectorAll('.para-entry-card');
