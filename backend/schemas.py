@@ -10,6 +10,10 @@ Rules:
   - No database logic here.
   - No FastAPI routing logic here.
   - All validation errors surface as 422 Unprocessable Entity automatically.
+
+PHASE 2 AUTH EXTENSION (2026-06-02):
+  - Added RegisterRequest  — validates POST /auth/register body.
+  - Added RegisterResponse — safe response shape (never exposes hash/salt).
 """
 
 import re
@@ -189,3 +193,73 @@ class DailyProgressRecordResponse(BaseModel):
     created_at: str
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# PHASE 2 AUTH — Register schemas
+# ---------------------------------------------------------------------------
+
+class RegisterRequest(BaseModel):
+    """
+    Schema for POST /auth/register request body.
+
+    Validates that:
+      - username is 3–40 characters, stripped of whitespace
+      - username contains only alphanumeric chars, underscores, hyphens
+      - password is at least 6 characters (basic security floor)
+      - password is not blank or whitespace-only
+
+    The plain password is accepted here for transport validation only.
+    It is immediately handed to auth.hash_password() and discarded —
+    it is NEVER stored, logged, or returned to the client.
+    """
+
+    username: str = Field(
+        ...,
+        min_length=3,
+        max_length=40,
+        description="Coordinator username — 3 to 40 characters.",
+    )
+    password: str = Field(
+        ...,
+        min_length=6,
+        description="Account password — minimum 6 characters.",
+    )
+
+    @field_validator("username", mode="before")
+    @classmethod
+    def username_must_be_clean(cls, v: Any) -> str:
+        s = str(v).strip()
+        if not s:
+            raise ValueError("Username cannot be blank.")
+        import re as _re
+        if not _re.match(r"^[A-Za-z0-9_\-]+$", s):
+            raise ValueError(
+                "Username may only contain letters, numbers, underscores, and hyphens."
+            )
+        return s
+
+    @field_validator("password", mode="before")
+    @classmethod
+    def password_must_not_be_blank(cls, v: Any) -> str:
+        s = str(v)
+        if not s.strip():
+            raise ValueError("Password cannot be blank or whitespace only.")
+        return s
+
+
+class RegisterResponse(BaseModel):
+    """
+    Safe response returned after successful registration.
+
+    IMPORTANT: This schema intentionally EXCLUDES salt and hashed_password.
+    Those fields exist in the database row but must NEVER be sent to clients.
+    Only non-sensitive metadata is returned.
+    """
+
+    id: int
+    username: str
+    created_at: str
+
+    model_config = {"from_attributes": True}
+

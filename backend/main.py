@@ -13,13 +13,18 @@ STRICTLY FORBIDDEN in this file:
   - Any HTML rendering.
   - Any SQLite connection code (use database.py / models.py).
   - Hardcoded student data.
+
+PHASE 2 AUTH EXTENSION (2026-06-02):
+  - Added import of create_user from auth.py.
+  - Added import of RegisterRequest, RegisterResponse from schemas.py.
+  - Added POST /auth/register route.
 """
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 
 from database import initialize_database
@@ -34,7 +39,17 @@ from models import (
     create_daily_progress,
     get_student_daily_progress,
 )
-from schemas import StudentCreate, StudentResponse, StudentUpdate, HistoryResponse, DailyProgressCreate, DailyProgressRecordResponse
+from schemas import (
+    StudentCreate,
+    StudentResponse,
+    StudentUpdate,
+    HistoryResponse,
+    DailyProgressCreate,
+    DailyProgressRecordResponse,
+    RegisterRequest,
+    RegisterResponse,
+)
+from auth import create_user
 from constants import SURAH_AYAHS, JUZ_SURAHS, SURAH_ORDER
 
 @asynccontextmanager
@@ -237,3 +252,55 @@ def add_daily_progress(student_id: int, payload: DailyProgressCreate) -> dict[st
     create_daily_progress(student_id, payload.date, dicts, payload.comment)
     
     return {"status": "ok", "message": "Records saved successfully."}
+
+
+# =============================================================================
+# PHASE 2 AUTH — Register endpoint
+# =============================================================================
+
+@app.post(
+    "/auth/register",
+    response_model=RegisterResponse,
+    status_code=status.HTTP_201_CREATED,
+    tags=["Auth"],
+)
+def register(payload: RegisterRequest) -> dict:
+    """
+    POST /auth/register
+    Create a new coordinator account.
+
+    Flow:
+        1. Pydantic validates username and password via RegisterRequest.
+        2. auth.create_user() generates a salt, hashes the password with
+           hashlib SHA-256, and inserts the row into the `users` table.
+        3. Returns RegisterResponse — id, username, created_at only.
+           The salt and hashed_password are NEVER returned to the client.
+
+    Errors:
+        409 Conflict  — username already exists.
+        422 Unprocessable Entity — validation failure (blank fields, etc.).
+    """
+    try:
+        user = create_user(
+            username=payload.username,
+            plain_password=payload.password,
+        )
+    except ValueError as exc:
+        # Username already taken — 409 Conflict is the correct HTTP status.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except RuntimeError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(exc),
+        ) from exc
+
+    # Return only the safe, non-sensitive fields.
+    # Pydantic's RegisterResponse model enforces this — it has no salt/hash fields.
+    return {
+        "id": user["id"],
+        "username": user["username"],
+        "created_at": user["created_at"],
+    }
