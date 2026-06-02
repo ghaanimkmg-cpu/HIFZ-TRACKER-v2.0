@@ -296,6 +296,7 @@ async function openUpdateModal(student) {
       apiFetch(`/students/${student.id}/history`),
       apiFetch(`/students/${student.id}/daily-progress`)
     ]);
+    window._currentDailyProgress = dailyProgress;
     
     currentMemorizedAyahsSet = {};
     const addAyahsToSet = (surah, start, end) => {
@@ -574,7 +575,31 @@ formDailyProgress.addEventListener('submit', async (e) => {
     dpError.hidden = false;
     return;
   }
-  
+
+  // Duplicate / Overlap check: prevent recording a Sabaq range that was already recorded.
+  if (!sabaqNotRecited) {
+    // Collect all previously recorded SABAQ entries for this student (from dailyProgress)
+    const previousSabaqEntries = (window._currentDailyProgress || [])
+        .filter(dp => dp.type === 'SABAQ' && !dp.not_recited && dp.surah === sabaqSurah && dp.start_ayah && dp.end_ayah);
+
+    for (const prev of previousSabaqEntries) {
+      const prevStart = parseInt(prev.start_ayah, 10);
+      const prevEnd   = parseInt(prev.end_ayah, 10);
+      // Check for any overlap: ranges overlap if start1 <= end2 AND start2 <= end1
+      const overlaps = sabaqStart <= prevEnd && prevStart <= sabaqEnd;
+      if (overlaps) {
+        const sameExact = sabaqStart === prevStart && sabaqEnd === prevEnd;
+        if (sameExact) {
+          dpError.textContent = `${sabaqSurah} Ayah ${sabaqStart}–${sabaqEnd} was already recorded as a Sabaq. Cannot record the same ayahs twice.`;
+        } else {
+          dpError.textContent = `Sabaq overlap detected! ${sabaqSurah} Ayah ${prevStart}–${prevEnd} was already recorded. New entry (Ayah ${sabaqStart}–${sabaqEnd}) overlaps with it.`;
+        }
+        dpError.hidden = false;
+        return;
+      }
+    }
+  }
+
   records.push({
     type: "SABAQ",
     juz: sabaqNotRecited ? null : sabaqJuz,
@@ -583,6 +608,7 @@ formDailyProgress.addEventListener('submit', async (e) => {
     end_ayah: sabaqNotRecited ? null : sabaqEnd,
     not_recited: sabaqNotRecited
   });
+
   
   // Parse Sabaq Para
   const spNotRecited = dpSpNotRecited.checked;
