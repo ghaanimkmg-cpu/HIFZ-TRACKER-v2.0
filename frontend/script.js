@@ -377,9 +377,44 @@ async function openUpdateModal(student) {
     } else {
         dpSpSection.classList.remove('locked');
         
-        // Reset to default
+        // Reset Not Recited checkbox
         dpSpNotRecited.checked = false;
         dpSpNotRecited.dispatchEvent(new Event('change'));
+
+        // --- SMART DEFAULT: Pre-fill Sabaq Para ayah range ---
+        // Rule:
+        //   Start Ayah = 1 (first ayah of the first surah of this Juz)
+        //   End Ayah   = end_ayah from the most recent SABAQ PARA record
+        //   Surah      = first surah of the current Juz (the para always starts there)
+
+        // Find latest SABAQ PARA record (dailyProgress is already sorted latest-first by the API)
+        const latestSpRecord = dailyProgress
+            .filter(dp => dp.type === 'SABAQ PARA' && !dp.not_recited && dp.end_ayah)
+            .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0];
+
+        // Get the first surah in the current Juz from JUZ_SURAHS
+        const juzSurahList = JUZ_SURAHS[student.current_juz] || [];
+        const firstSurahOfJuz = juzSurahList.length > 0 ? juzSurahList[0] : student.current_surah;
+
+        // Set the Sabaq Para surah dropdown to the first surah of the juz
+        const dpSpSurahEl = document.getElementById('dp-sp-surah');
+        if (dpSpSurahEl) {
+            dpSpSurahEl.value = firstSurahOfJuz;
+        }
+
+        // Pre-fill start ayah = 1
+        const dpSpStartEl = document.getElementById('dp-sp-start');
+        if (dpSpStartEl) {
+            dpSpStartEl.value = 1;
+        }
+
+        // Pre-fill end ayah = end_ayah from latest SABAQ PARA record (if one exists)
+        const dpSpEndEl = document.getElementById('dp-sp-end');
+        if (dpSpEndEl && latestSpRecord && latestSpRecord.end_ayah) {
+            dpSpEndEl.value = latestSpRecord.end_ayah;
+        } else if (dpSpEndEl) {
+            dpSpEndEl.value = ''; // No previous record — leave blank for manual entry
+        }
     }
 
     // 2. PARA Locking (Completed Juz Rule)
