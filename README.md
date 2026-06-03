@@ -35,6 +35,22 @@ All data lives in SQLite. The frontend never stores data — it always fetches f
 
 ---
 
+## 📸 Project Screenshots
+
+### 🔐 Login Page
+![Login Page](Screenshots/login-page.png)
+
+### 👥 Students Overview
+![Students Page](Screenshots/students-page.png)
+
+### 📖 Hifz Progress Tracking
+![Student Progress Page](Screenshots/student-progress-page.png)
+
+### 📋 Student Record History
+![Student Record Page](Screenshots/student-record-page.png)
+
+---
+
 ## Folder Structure
 
 ```
@@ -223,22 +239,6 @@ Use this checklist after each phase to verify the system:
 - All SQL MUST be parameterized — never string-interpolated.
 - Frontend MUST only talk to backend via `fetch()`.
 - Each phase MUST be tested and reported before the next begins.
-
----
-
-## 📸 Project Screenshots
-
-### 🔐 Login Page
-![Login Page](Screenshots/login-page.png)
-
-### 👥 Students Overview
-![Students Page](Screenshots/students-page.png)
-
-### 📖 Hifz Progress Tracking
-![Student Progress Page](Screenshots/student-progress-page.png)
-
-### 📋 Student Record History
-![Student Record Page](Screenshots/student-record-page.png)
 
 ---
 
