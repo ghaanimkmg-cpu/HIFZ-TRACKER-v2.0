@@ -226,4 +226,20 @@ Use this checklist after each phase to verify the system:
 
 ---
 
+## 📸 Project Screenshots
+
+### 🔐 Login Page
+![Login Page](screenshots/login%20page.png)
+
+### 👥 Students Overview
+![Students Page](screenshots/Students%20page.png)
+
+### 📖 Hifz Progress Tracking
+![Student Progress Page](screenshots/Student%20progress%20page.png)
+
+### 📋 Student Record History
+![Student Record Page](screenshots/Student%20record%20page.png)
+
+---
+
 *HIFZ TRACKER 2.0 — ZaryahPlus Internal Product*
