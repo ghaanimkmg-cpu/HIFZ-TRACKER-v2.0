@@ -229,16 +229,16 @@ Use this checklist after each phase to verify the system:
 ## 📸 Project Screenshots
 
 ### 🔐 Login Page
-![Login Page](Screenshots/login%20page.png)
+![Login Page](Screenshots/login-page.png)
 
 ### 👥 Students Overview
-![Students Page](Screenshots/Students%20page.png)
+![Students Page](Screenshots/students-page.png)
 
 ### 📖 Hifz Progress Tracking
-![Student Progress Page](Screenshots/Student%20progress%20page.png)
+![Student Progress Page](Screenshots/student-progress-page.png)
 
 ### 📋 Student Record History
-![Student Record Page](Screenshots/Student%20record%20page.png)
+![Student Record Page](Screenshots/student-record-page.png)
 
 ---
 
