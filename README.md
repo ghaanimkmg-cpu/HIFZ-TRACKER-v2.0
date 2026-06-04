@@ -9,13 +9,13 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-Completed-brightgreen">
-  <img src="https://img.shields.io/badge/Project-Full%20Stack-blue">
-  <img src="https://img.shields.io/badge/Version-v2.0-orange">
-  <img src="https://img.shields.io/badge/Auth-Secure%20Login-green">
-  <img src="https://img.shields.io/badge/Feature-Student%20Tracking-purple">
-  <img src="https://img.shields.io/badge/Backend-API-blueviolet">
-  <img src="https://img.shields.io/badge/Database-Connected-lightgrey">
+  <img src="https://img.shields.io/badge/Status-Completed-10B981?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Project-Full%20Stack-3B82F6?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Version-v2.0-F59E0B?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Auth-Secure%20Login-8B5CF6?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Feature-Student%20Tracking-EC4899?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Backend-API-14B8A6?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Database-Connected-6366F1?style=for-the-badge">
 </p>
 
 ## Project Preview
