@@ -1,53 +1,94 @@
-# HIFZ TRACKER 2.0
+<h1 align="center">Hifz Tracker v2.0</h1>
 
-> Internal Hifz memorization progress tracker for coordinators.
-> Built for ZaryahPlus.
+<p align="center">
+  A secure full-stack Hifz management system for tracking students, revision, progress, and records.
+</p>
 
----
+<p align="center">
+  Hifz Tracker v2.0 was built to make student memorization tracking more organized, secure, and easier to manage. The project includes authentication, protected access, student records, progress updates, and a clean dashboard flow for daily use.
+</p>
 
-## Project Overview
+<p align="center">
+  <img src="https://img.shields.io/badge/Status-Completed-brightgreen">
+  <img src="https://img.shields.io/badge/Project-Full%20Stack-blue">
+  <img src="https://img.shields.io/badge/Version-v2.0-orange">
+  <img src="https://img.shields.io/badge/Auth-Secure%20Login-green">
+  <img src="https://img.shields.io/badge/Feature-Student%20Tracking-purple">
+  <img src="https://img.shields.io/badge/Backend-API-blueviolet">
+  <img src="https://img.shields.io/badge/Database-Connected-lightgrey">
+</p>
 
-HIFZ TRACKER 2.0 is a focused, single-page internal tool that lets Hifz coordinators:
+## Project Preview
 
-- **See all students** grouped by their enrollment batch year.
-- **Track each student's progress** — which Juz, which Surah, and which Ayah they stopped at.
-- **Update progress inline** — directly on the card without navigating away.
-- **Create new students** through a clean modal form.
-- **Search students** by name instantly.
+<p align="center">
+  <img src="Screenshots/login-page.png" width="850" alt="Login Page">
+</p>
 
-The system follows a strict frontend / backend separation.  
-All data lives in SQLite. The frontend never stores data — it always fetches from the API.
+<p align="center">
+  <img src="Screenshots/students-page.png" width="850" alt="Students Page">
+</p>
 
----
+<p align="center">
+  <img src="Screenshots/student-progress-page.png" width="850" alt="Student Progress Page">
+</p>
 
-## Features
+<p align="center">
+  <img src="Screenshots/student-record-page.png" width="850" alt="Student Record Page">
+</p>
 
-| Feature | Status |
-|---|---|
-| Batch-year student columns | ✓ |
-| Student card with Juz / Surah / Ayah | ✓ |
-| Inline update progress (no page change) | ✓ |
-| Create student modal | ✓ |
-| Instant search by name | ✓ |
-| Persistent SQLite storage | ✓ |
-| FastAPI backend with full validation | ✓ |
-| ZaryahPlus-inspired UI | ✓ |
+## About the Project
 
----
+Hifz Tracker v2.0 is a full-stack web application built to help manage Hifz students in a more structured way. Instead of manually tracking student progress, records, and revision details, this system gives a clean digital workflow where student data can be added, viewed, updated, and managed securely.
 
-## 📸 Project Screenshots
+This version upgrades the earlier tracker by adding login and authentication, protected routes, account-based access, improved backend structure, and a more complete user flow.
 
-### 🔐 Login Page
-![Login Page](Screenshots/login-page.png)
+## Why I Built This
 
-### 👥 Students Overview
-![Students Page](Screenshots/students-page.png)
+I built this project because Hifz progress tracking needs clarity and consistency. A student’s memorization journey has daily updates, revision records, and individual progress differences. This project was created to make that process easier to manage through a simple and secure system.
 
-### 📖 Hifz Progress Tracking
-![Student Progress Page](Screenshots/student-progress-page.png)
+## Key Features
 
-### 📋 Student Record History
-![Student Record Page](Screenshots/student-record-page.png)
+- 🔒 Secure login and authentication system
+- 📝 Sign-up flow for new users
+- 🛡️ Protected routes for authenticated access
+- 📊 Student management dashboard
+- ✍️ Add, view, update, and manage student records
+- 📈 Track student progress and revision status
+- ✨ Clean frontend interface
+- ⚙️ Backend API integration
+- 🗄️ Database-connected workflow
+- 🛑 Error handling for invalid or unauthorized access
+- 📂 Organized project structure
+- 🚀 Version 2.0 upgrade from the original tracker
+
+## What Changed in v2.0
+
+- Added login page
+- Added sign-up flow
+- Added authentication logic
+- Added protected access
+- Improved student data management
+- Improved backend routes
+- Added database connection
+- Added security checks
+- Improved README and screenshots
+- Made the project more complete and review-ready
+
+## How It Works
+
+```txt
+Login / Sign Up
+        ↓
+Authentication Check
+        ↓
+Protected Dashboard
+        ↓
+Student Management
+        ↓
+Progress Tracking
+        ↓
+Database Storage
+```
 
 ---
 
@@ -69,8 +110,6 @@ hifz-tracker-2/
 │   ├── style.css        ← ZaryahPlus design system (vanilla CSS)
 │   ├── script.js        ← All UI logic + API calls via fetch()
 │   └── assets/          ← Static assets (icons, images)
-│
-└── README.md            ← This file
 ```
 
 ---
@@ -85,7 +124,7 @@ hifz-tracker-2/
 ### Step 1 — Navigate to the backend folder
 
 ```powershell
-cd "d:\HIFZ TRACKER V2.0\hifz-tracker-2\backend"
+cd "d:\PROJECTS\HIFZ TRACKER V2.0\hifz-tracker-2\backend"
 ```
 
 ### Step 2 — (Recommended) Create a virtual environment
@@ -134,7 +173,7 @@ The frontend is pure HTML/CSS/JS — no build step needed.
 **Option A — Open directly in browser:**
 
 ```
-Open: d:\HIFZ TRACKER V2.0\hifz-tracker-2\frontend\index.html
+Open: d:\PROJECTS\HIFZ TRACKER V2.0\hifz-tracker-2\frontend\index.html
 ```
 
 > ⚠ Some browsers block `fetch()` from `file://` URLs due to CORS.
@@ -145,7 +184,7 @@ Open: d:\HIFZ TRACKER V2.0\hifz-tracker-2\frontend\index.html
 Open a **second terminal window** and run:
 
 ```powershell
-cd "d:\HIFZ TRACKER V2.0\hifz-tracker-2\frontend"
+cd "d:\PROJECTS\HIFZ TRACKER V2.0\hifz-tracker-2\frontend"
 python -m http.server 3000
 ```
 
@@ -230,15 +269,6 @@ Use this checklist after each phase to verify the system:
 [ ] Invalid input returns professional error (not 500)
 [ ] DELETE /students/{id} removes the student
 ```
-
----
-
-## Development Rules (Internal Reference)
-
-- All data MUST come from the backend — never store in frontend variables.
-- All SQL MUST be parameterized — never string-interpolated.
-- Frontend MUST only talk to backend via `fetch()`.
-- Each phase MUST be tested and reported before the next begins.
 
 ---
 

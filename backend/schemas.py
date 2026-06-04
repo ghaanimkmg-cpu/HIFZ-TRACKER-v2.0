@@ -68,7 +68,7 @@ class StudentCreate(BaseModel):
     )
     current_ayah: str = Field(
         ...,
-        description="Ayah range (e.g. '2-7').",
+        description="Ayah range (e.g. '2-7').", 
     )
     previous_juz: list[int] = Field(
         default_factory=list,
