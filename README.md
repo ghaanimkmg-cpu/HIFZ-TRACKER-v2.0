@@ -9,13 +9,13 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Status-Completed-10B981?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Project-Full%20Stack-3B82F6?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Version-v2.0-F59E0B?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Auth-Secure%20Login-8B5CF6?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Feature-Student%20Tracking-EC4899?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Backend-API-14B8A6?style=for-the-badge">
-  <img src="https://img.shields.io/badge/Database-Connected-6366F1?style=for-the-badge">
+  <img src="https://img.shields.io/badge/Status-Completed-2EA043?style=flat-square&logo=github&logoColor=white">
+  <img src="https://img.shields.io/badge/Project-Full%20Stack-007ACC?style=flat-square&logo=javascript&logoColor=white">
+  <img src="https://img.shields.io/badge/Version-v2.0-F59E0B?style=flat-square&logo=git&logoColor=white">
+  <img src="https://img.shields.io/badge/Auth-Secure%20Login-EB5424?style=flat-square&logo=auth0&logoColor=white">
+  <img src="https://img.shields.io/badge/Feature-Student%20Tracking-8B5CF6?style=flat-square&logo=googleanalytics&logoColor=white">
+  <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white">
+  <img src="https://img.shields.io/badge/Database-SQLite-003B57?style=flat-square&logo=sqlite&logoColor=white">
 </p>
 
 ## Project Preview
